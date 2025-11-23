@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/opinion/:match*",
+      "destination": "https://api.opinion.trade/v1/:match*"
+    },
+    {
+      "source": "/api/polymarket/:match*",
+      "destination": "https://gamma-api.polymarket.com/:match*"
+    }
+  ]
+}

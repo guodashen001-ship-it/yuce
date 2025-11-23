@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GMGN Style Arbitrage | 预测市场套利狙击</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Modern Slate Theme (更亮、更清晰的深色模式) */
+        :root {
+            --bg-base: #0f172a;
+            /* Slate 900 */
+            --bg-card: #1e293b;
+            /* Slate 800 */
+            --bg-hover: #334155;
+            /* Slate 700 */
+            --border-color: #334155;
+            /* Slate 700 */
+
+            --text-primary: #f8fafc;
+            /* Slate 50 */
+            --text-secondary: #cbd5e1;
+            /* Slate 300 */
+            --text-muted: #94a3b8;
+            /* Slate 400 */
+
+            /* 涨跌色 */
+            --up-green: #34d399;
+            /* Emerald 400 */
+            --down-red: #f87171;
+            /* Red 400 */
+
+            --brand-purple: #a78bfa;
+            /* Violet 400 */
+            --brand-glow: rgba(167, 139, 250, 0.4);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-base);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .sniper-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .table-head-cell {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 14px 20px;
+            text-align: left;
+            user-select: none;
+            vertical-align: bottom;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #1e293b;
+        }
+
+        .table-cell {
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            border-top: 1px solid var(--border-color);
+            vertical-align: middle;
+            color: var(--text-secondary);
+        }
+
+        .btn-sniper {
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(52, 211, 153, 0.4);
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-sniper:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(52, 211, 153, 0.6);
+            filter: brightness(1.1);
+        }
+
+        .category-chip {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .category-chip:hover {
+            background-color: #475569;
+            color: var(--text-primary);
+            border-color: #64748b;
+        }
+
+        .category-chip.active {
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #c4b5fd;
+            border-color: var(--brand-purple);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+        }
+
+        .logo-glow {
+            text-shadow: 0 0 15px var(--brand-glow);
+        }
+
+        .fire-icon {
+            filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.6));
+            font-size: 1.2em;
+        }
+
+        .sort-icon {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-left: 6px;
+            transition: transform 0.2s;
+            opacity: 0.5;
+            stroke-width: 2.5px;
+        }
+
+        .table-head-cell:hover .sort-icon {
+            opacity: 0.8;
+            color: var(--text-primary);
+        }
+
+        .sort-active .sort-icon {
+            opacity: 1;
+            color: var(--brand-purple);
+        }
+
+        .header-sub {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .table-row-hover:hover {
+            background-color: var(--bg-hover) !important;
+        }
+
+        .table-row-hover:hover td {
+            color: var(--text-primary);
+        }
+
+        /* Marquee Animation */
+        @keyframes marquee {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .animate-marquee {
+            display: flex;
+            width: max-content;
+            animation: marquee 30s linear infinite;
+        }
+
+        .animate-marquee:hover {
+            animation-play-state: paused;
+        }
+
+        /* Custom Tooltip */
+        .gas-tooltip-container {
+            position: relative;
+        }
+
+        .gas-tooltip {
+            visibility: hidden;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            text-align: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 100;
+            font-size: 10px;
+            white-space: nowrap;
+            margin-top: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .gas-tooltip-container:hover .gas-tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col selection:bg-violet-500/30">
+
+    <!-- Navbar -->
+    <nav class="border-b border-[#334155] bg-[#0f172a]/90 backdrop-blur-md sticky top-0 z-50 shadow-sm relative z-[60]">
+        <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <!-- Logo -->
+                <div class="flex items-center gap-3 select-none cursor-pointer group">
+                    <div
+                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold tracking-tight text-white logo-glow block leading-tight">Arb<span class="text-violet-400">Sniper</span></span>
+                        <span class="text-[11px] font-medium text-slate-400 block leading-tight tracking-wider">WEB3 套利狙击终端</span>
+                    </div>
+                </div>
+
+                <!-- Nav Links -->
+                <div class="hidden md:flex items-center gap-2">
+                    <a href="#"
+                        class="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#1e293b] border border-[#334155] shadow-sm">
+                        监控面板 Dashboard
+                    </a>
+                    <a href="#"
+                        class="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-[#1e293b] transition-all">
+                        历史回测 History
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right Actions -->
+            <div class="flex items-center gap-4">
+
+                <!-- Binance Ticker Widget -->
+                <div class="hidden xl:flex items-center gap-3 px-4 py-2 bg-[#1e293b] rounded-lg border border-[#334155] text-sm font-mono shadow-sm"
+                    title="Binance Spot Realtime">
+                    <div class="flex items-center gap-2 border-r border-[#334155] pr-3">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Binance_Logo.svg" class="w-5 h-5 opacity-90" alt="Binance">
+                        <span class="text-slate-300 font-bold">USDC/USDT</span>
+                    </div>
+                    <span id="binance-price" class="text-white font-bold text-base transition-colors duration-300">Connecting...</span>
+                </div>
+
+                <!-- Gas Monitor: Polygon & BSC -->
+                <div class="hidden lg:flex items-center gap-2">
+                    <!-- Polygon Gas -->
+                    <div
+                        class="gas-tooltip-container flex flex-col items-end justify-center px-3 py-1 bg-[#1e293b] rounded-lg border border-[#334155] text-xs cursor-help">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_6px_rgba(168,85,247,0.6)]"></span>
+                            <span class="text-slate-400 font-bold">Polygon</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5 font-mono">
+                            <span id="poly-gwei" class="text-purple-300">--</span>
+                            <span id="poly-cost" class="text-white font-bold">--</span>
+                        </div>
+                        <div class="gas-tooltip">预估交互消耗 (200k Gas)</div>
+                    </div>
+
+                    <!-- BSC Gas -->
+                    <div
+                        class="gas-tooltip-container flex flex-col items-end justify-center px-3 py-1 bg-[#1e293b] rounded-lg border border-[#334155] text-xs cursor-help">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_6px_rgba(234,179,8,0.6)]"></span>
+                            <span class="text-slate-400 font-bold">BSC</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-0.5 font-mono">
+                            <span id="bsc-gwei" class="text-yellow-300">--</span>
+                            <span id="bsc-cost" class="text-white font-bold">--</span>
+                        </div>
+                        <div class="gas-tooltip">预估交互消耗 (150k Gas)</div>
+                    </div>
+                </div>
+
+                <button onclick="refreshData()" class="group flex items-center gap-3 px-5 py-2 rounded-lg text-sm font-bold btn-sniper border border-emerald-500/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <div class="flex flex-col leading-none items-start">
+                        <span class="text-sm">SCAN</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ★★★ Real-time Sniper Alert Bar ★★★ -->
+    <div
+        class="relative w-full bg-[#1e1b4b] border-b border-violet-500/20 h-10 flex items-center overflow-hidden shadow-md z-50">
+        <!-- Label -->
+        <div
+            class="z-20 bg-[#1e1b4b] px-4 h-full flex items-center border-r border-violet-500/30 text-violet-300 text-xs font-bold uppercase tracking-widest shadow-[4px_0_10px_rgba(0,0,0,0.3)] shrink-0">
+            <span class="animate-pulse mr-2 text-orange-400">●</span> ⚡ 狙击警报 SNIPER ALERT
+        </div>
+        <!-- Ticker Content -->
+        <div class="flex-1 overflow-hidden h-full flex items-center relative mask-gradient-r">
+            <div id="ticker-track" class="animate-marquee flex items-center gap-0">
+                <!-- Content injected via JS -->
+                <div class="px-4 text-slate-400 text-sm">正在扫描高利润机会...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8">
+
+        <!-- Header -->
+        <div class="flex flex-col gap-6 mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-white flex items-center gap-3 mb-2">
+                        实时套利信号
+                        <span class="text-xs font-bold px-2.5 py-1 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">LIVE SIGNAL</span>
+                    </h1>
+                    <p class="text-slate-400 text-base flex items-center gap-3">
+                        深度扫描 PolyMarket & OpinionTrade 订单薄
+                        <span class="text-slate-600">|</span>
+                        <span class="text-emerald-400 font-bold">当前过滤: 价差 > 4%</span> (Cover 4% Fees)
+                        <span class="text-slate-600">|</span>
+                        刷新倒计时: <span id="countdown" class="text-emerald-400 font-mono font-bold text-lg">30</span>s
+                    </p>
+                </div>
+
+                <div class="relative w-full md:w-80">
+                    <input type="text" placeholder="搜索代币 / Search Token..." class="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-3 pl-11 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all placeholder-slate-500 shadow-sm">
+                    <svg class="w-5 h-5 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Categories -->
+            <div class="flex flex-wrap gap-3" id="category-filters"></div>
+        </div>
+
+        <!-- Table -->
+        <div id="arbitrage-table-container" class="sniper-card overflow-hidden min-h-[600px] relative">
+
+            <div id="loading-indicator"
+                class="absolute inset-0 z-20 bg-[#0f172a]/80 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+                <div class="relative">
+                    <div class="w-16 h-16 border-4 border-violet-500/30 rounded-full animate-[spin_3s_linear_infinite]">
+                    </div>
+                    <div
+                        class="w-16 h-16 border-t-4 border-violet-500 rounded-full absolute top-0 left-0 animate-[spin_1s_linear_infinite]">
+                    </div>
+                </div>
+                <div class="mt-6 text-violet-300 font-mono text-base font-bold tracking-widest animate-pulse">
+                    正在扫描链上数据...</div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full w-full border-collapse">
+                    <thead class="bg-[#1e293b] sticky top-0 z-10 shadow-md">
+                        <tr>
+                            <th class="table-head-cell pl-8 w-[28%]">
+                                <div class="text-slate-200">事件 / 市场</div>
+                                <span class="header-sub">Event / Market</span>
+                            </th>
+                            <th class="table-head-cell w-[12%]">
+                                <div class="text-slate-200">池子深度</div>
+                                <span class="header-sub">Liquidity / Vol</span>
+                            </th>
+
+                            <th class="table-head-cell w-[12%] cursor-pointer hover:bg-[#334155] transition-colors group"
+                                onclick="toggleSort('time')" id="header-time">
+                                <div class="flex items-center gap-2">
+                                    <div>
+                                        <div class="text-slate-200 group-hover:text-white">结束时间</div>
+                                        <span class="header-sub">End Time</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="sort-icon text-slate-500 group-hover:text-white" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                    </svg>
+                                </div>
+                            </th>
+
+                            <th class="table-head-cell text-right w-[14%]">
+                                <div class="text-slate-200">Polymarket</div>
+                                <span class="header-sub">Yes / No</span>
+                            </th>
+                            <th class="table-head-cell text-right w-[14%]">
+                                <div class="text-slate-200">OpinionTrade</div>
+                                <span class="header-sub">Yes / No</span>
+                            </th>
+
+                            <th class="table-head-cell text-right w-[10%] cursor-pointer hover:bg-[#334155] transition-colors group"
+                                onclick="toggleSort('profit')" id="header-profit">
+                                <div class="flex items-center justify-end gap-2">
+                                    <div class="text-right">
+                                        <div class="text-slate-200 group-hover:text-white">价差</div>
+                                        <span class="header-sub">Spread</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="sort-icon text-slate-500 group-hover:text-white" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                            d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                    </svg>
+                                </div>
+                            </th>
+
+                            <th class="table-head-cell text-right pr-8 w-[10%]">
+                                <div class="text-slate-200">操作</div>
+                                <span class="header-sub">Action</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="arbitrage-data" class="divide-y divide-[#334155]">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-6 text-slate-500">
+            <div id="page-info" class="font-mono text-sm">数据加载中...</div>
+            <div id="pagination-container" class="flex items-center gap-2"></div>
+        </div>
+
+        <div class="mt-10 text-center text-xs text-slate-600">
+            <p>免责声明: Degen工具仅供参考。API 延迟不可避免。DYOR (Do Your Own Research).</p>
+            <p class="font-mono mt-2 opacity-60">v1.2.4 (Filter >4% & Profit Sort) | Source: On-chain</p>
+        </div>
+
+    </main>
+
+    <script>
+        const REFRESH_INTERVAL_SECONDS = 30;
+        const PROFIT_THRESHOLD = 0.04; // 4% threshold filter
+        const ALERT_THRESHOLD = 0.05; // Ticker shows items > 5%
+        const EVENTS_PER_PAGE = 15;
+        
+        const GAS_LIMIT_POLYGON = 200000;
+        const GAS_LIMIT_BSC = 150000;
+
+        const CATEGORIES = [
+            { id: 'all', name: '🔥 热门 Trending' },
+            { id: 'Crypto', name: '加密 Crypto' },
+            { id: 'Politics', name: '政治 Politics' },
+            { id: 'Sports', name: '体育 Sports' },
+            { id: 'Business', name: '经济 Economy' },
+            { id: 'Pop Culture', name: '流行 Pop/Meme' }
+        ];
+
+        let currentPage = 1;
+        let currentCategory = 'all';
+        let allMatchedEvents = [];
+        let countdownTimer = null;
+        let timeLeft = REFRESH_INTERVAL_SECONDS;
+        // UPDATE: Default sort by PROFIT DESCENDING
+        let sortConfig = { column: 'profit', direction: 'desc' };
+
+        const tableBody = document.getElementById('arbitrage-data');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const paginationContainer = document.getElementById('pagination-container');
+        const countdownDisplay = document.getElementById('countdown');
+        const pageInfoDisplay = document.getElementById('page-info');
+        const categoryFilterContainer = document.getElementById('category-filters');
+        const tickerTrack = document.getElementById('ticker-track');
+
+        // =========================================================
+        // Gas Price Logic
+        // =========================================================
+        async function fetchGasPrices() {
+            const rpcs = {
+                polygon: 'https://polygon-rpc.com',
+                bsc: 'https://bscrpc.com' 
+            };
+
+            const fetchGwei = async (url) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }),
+                        signal: controller.signal,
+                        mode: 'cors' 
+                    });
+                    clearTimeout(timeoutId);
+                    const data = await res.json();
+                    return parseInt(data.result, 16) / 1e9; 
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            fetchGwei(rpcs.polygon).then(polyGwei => {
+                if (polyGwei) {
+                    const polyCost = (polyGwei * GAS_LIMIT_POLYGON * 1e-9).toFixed(4);
+                    document.getElementById('poly-gwei').innerText = `${polyGwei.toFixed(0)} Gwei`;
+                    document.getElementById('poly-cost').innerText = `${polyCost} MATIC`;
+                } else {
+                    document.getElementById('poly-gwei').innerText = `ERR`;
+                }
+            });
+
+            fetchGwei(rpcs.bsc).then(bscGwei => {
+                if (bscGwei) {
+                    const bscCost = (bscGwei * GAS_LIMIT_BSC * 1e-9).toFixed(4);
+                    document.getElementById('bsc-gwei').innerText = `${bscGwei.toFixed(1)} Gwei`;
+                    document.getElementById('bsc-cost').innerText = `${bscCost} BNB`;
+                } else {
+                    document.getElementById('bsc-gwei').innerText = `ERR`;
+                }
+            });
+        }
+
+        function initBinanceWS() {
+            const priceEl = document.getElementById('binance-price');
+            let ws = null;
+
+            function connect() {
+                ws = new WebSocket('wss://stream.binance.com:9443/ws/usdcusdt@trade');
+                ws.onopen = () => { priceEl.innerText = "Connected"; };
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const price = parseFloat(data.p).toFixed(4); 
+                        priceEl.innerText = price;
+                        if (parseFloat(price) > 1.0002) priceEl.className = "text-emerald-400 font-bold font-mono transition-colors duration-300";
+                        else if (parseFloat(price) < 0.9998) priceEl.className = "text-red-400 font-bold font-mono transition-colors duration-300";
+                        else priceEl.className = "text-white font-bold font-mono transition-colors duration-300";
+                    } catch (e) { console.error("WS Parse", e); }
+                };
+                ws.onclose = () => { setTimeout(connect, 5000); };
+                ws.onerror = (err) => { priceEl.innerText = "API Error"; };
+            }
+            connect();
+        }
+
+        function calculateArbitrage(event) {
+            const costA = event.pmYes + event.otNo;
+            const profitA = 1 - costA;
+            const costB = event.pmNo + event.otYes;
+            const profitB = 1 - costB;
+
+            if (profitA > profitB && profitA > 0) return { profit: profitA, strategy: '做多 PM / 做空 OT', type: 'A' };
+            else if (profitB > 0) return { profit: profitB, strategy: '做空 PM / 做多 OT', type: 'B' };
+            else return { profit: Math.max(profitA, profitB), strategy: '-', type: 'None' };
+        }
+
+        function createDummyEvent(index, isProfitable) {
+            const templates = [
+                { t: "ETH > $4,000 Dec 31", c: "Crypto" },
+                { t: "Fed Cut Rates 25bps", c: "Business" },
+                { t: "BTC Breaks $100k", c: "Crypto" },
+                { t: "Solana Flippening BNB", c: "Crypto" },
+                { t: "Trump Win 2024", c: "Politics" },
+                { t: "Chiefs Win SuperBowl", c: "Sports" },
+                { t: "GTA 6 Release Date", c: "Pop Culture" },
+                { t: "LayerZero Airdrop Date", c: "Crypto" },
+                { t: "Binance Listing: MEME", c: "Crypto" },
+                { t: "China Stimulus Package", c: "Business" },
+                { t: "GPT-5 Release Q1", c: "Science" },
+                { t: "DOGE to $1", c: "Crypto" }
+            ];
+            
+            const temp = templates[index % templates.length];
+            const title = `${temp.t} #${index}`;
+            const cat = temp.c;
+            const daysLeft = Math.floor(Math.random() * 60) + 1; 
+            
+            let yesP, noP, otYesP, otNoP;
+            
+            // Generate Profitable Events (> 4%)
+            if (isProfitable) {
+                const basePrice = 0.30 + (Math.random() * 0.20); 
+                yesP = basePrice;
+                // Gap between 5% and 20%
+                const gap = 0.05 + Math.random() * 0.15;
+                otNoP = (1 - basePrice) - gap; 
+                
+                noP = 1 - yesP; 
+                otYesP = 1 - otNoP;
+            } else {
+                yesP = Math.random() * 0.8 + 0.1; 
+                noP = 1 - yesP; 
+                otYesP = yesP + (Math.random() * 0.04 - 0.02); 
+                otNoP = 1 - otYesP;
+            }
+            const fix = (n) => Math.min(0.99, Math.max(0.01, n));
+            const rawVol = Math.floor(Math.random() * 5000000) + 50000;
+            
+            const event = {
+                title: title,
+                category: cat,
+                endDate: new Date(Date.now() + 86400000 * daysLeft).toISOString(),
+                pmYes: fix(yesP), pmNo: fix(noP), otYes: fix(otYesP), otNo: fix(otNoP),
+                pmUrl: "#", otUrl: "#",
+                volume: rawVol
+            };
+
+            event.maxProfit = calculateArbitrage(event).profit;
+            return event;
+        }
+
+        async function fetchAndMatchData() {
+            await new Promise(r => setTimeout(r, 600));
+            const events = [];
+            // Increase count to ensure we have enough profitable items after filtering
+            for (let i = 0; i < 120; i++) events.push(createDummyEvent(i, i % 4 === 0)); 
+            return events;
+        }
+
+        // Ticker Logic
+        function updateTicker(events) {
+            // Filter > 5% for ticker specifically
+            const highProfitEvents = events.filter(e => e.maxProfit > ALERT_THRESHOLD);
+            highProfitEvents.sort((a, b) => b.maxProfit - a.maxProfit);
+
+            if (highProfitEvents.length === 0) {
+                tickerTrack.innerHTML = `<div class="px-4 text-slate-400 text-sm">Scanning for high alpha...</div>`;
+                return;
+            }
+
+            let itemsHtml = '';
+            const itemsToRender = highProfitEvents.length < 5 ? [...highProfitEvents, ...highProfitEvents, ...highProfitEvents] : highProfitEvents;
+
+            itemsToRender.forEach(e => {
+                const profit = (e.maxProfit * 100).toFixed(2);
+                itemsHtml += `
+                    <div class="flex items-center gap-3 px-6 py-2 border-r border-violet-500/20 bg-[#1e1b4b] hover:bg-[#2e1065] transition-colors group cursor-pointer shrink-0">
+                        <span class="text-orange-400 animate-pulse">🔥</span>
+                        <span class="text-slate-200 font-semibold text-sm whitespace-nowrap">${e.title}</span>
+                        <span class="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded text-xs font-bold font-mono">+${profit}%</span>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                            <a href="${e.pmUrl}" target="_blank" class="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-500">PM</a>
+                            <a href="${e.otUrl}" target="_blank" class="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded hover:bg-purple-500">OT</a>
+                        </div>
+                    </div>
+                `;
+            });
+            tickerTrack.innerHTML = itemsHtml + itemsHtml; 
+        }
+
+        function toggleSort(column) {
+            if (sortConfig.column === column) sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            else { sortConfig.column = column; sortConfig.direction = column === 'profit' ? 'desc' : 'asc'; }
+            refreshView();
+        }
+
+        function updateSortIcons() {
+            document.getElementById('header-time').classList.remove('sort-active');
+            document.getElementById('header-profit').classList.remove('sort-active');
+            const arrowUp = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7" />';
+            const arrowDown = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />';
+            const arrowDefault = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />';
+            document.getElementById('header-time').querySelector('.sort-icon').innerHTML = arrowDefault;
+            document.getElementById('header-profit').querySelector('.sort-icon').innerHTML = arrowDefault;
+            const activeHeader = document.getElementById(`header-${sortConfig.column}`);
+            if (activeHeader) {
+                activeHeader.classList.add('sort-active');
+                activeHeader.querySelector('.sort-icon').innerHTML = sortConfig.direction === 'asc' ? arrowUp : arrowDown;
+            }
+        }
+
+        function sortEvents(events) {
+            return events.sort((a, b) => {
+                let valA, valB;
+                if (sortConfig.column === 'time') { valA = new Date(a.endDate).getTime(); valB = new Date(b.endDate).getTime(); }
+                else { valA = a.maxProfit; valB = b.maxProfit; }
+                if (sortConfig.direction === 'asc') return valA - valB;
+                else return valB - valA;
+            });
+        }
+
+        function renderCategoryFilter() {
+            categoryFilterContainer.innerHTML = '';
+            CATEGORIES.forEach(cat => {
+                const btn = document.createElement('button');
+                const isActive = currentCategory === cat.id;
+                btn.className = `category-chip px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap shadow-sm ${isActive ? 'active' : ''}`;
+                btn.textContent = cat.name;
+                btn.onclick = () => { currentCategory = cat.id; currentPage = 1; renderCategoryFilter(); refreshView(); };
+                categoryFilterContainer.appendChild(btn);
+            });
+        }
+
+        function formatPercent(p) { return `${(p * 100).toFixed(1)}%`; }
+
+        function formatVolume(v) {
+            if (v >= 1000000) return `$${(v/1000000).toFixed(1)}M`;
+            if (v >= 1000) return `$${(v/1000).toFixed(1)}K`;
+            return `$${v}`;
+        }
+
+        function renderTable(events) {
+            tableBody.innerHTML = '';
+            updateSortIcons();
+            if (events.length === 0) { 
+                tableBody.innerHTML = `<tr><td colspan="7" class="py-24 text-center text-slate-500 text-lg">当前无 >4% 利润机会<br><span class="text-sm opacity-60">请等待刷新...</span></td></tr>`; 
+                return; 
+            }
+
+            events.forEach(event => {
+                const arb = calculateArbitrage(event);
+                const isProfitable = arb.profit >= PROFIT_THRESHOLD;
+                const profitPct = (arb.profit * 100).toFixed(2);
+                
+                let spreadColor = "text-emerald-400 font-bold drop-shadow-md"; // Always highlight as >4% are filtered
+                const fire = isProfitable ? `<span class="text-orange-500 mr-2 fire-icon">🔥</span>` : '';
+
+                const liquidityPct = Math.min(100, Math.max(10, (event.volume / 5000000) * 100));
+
+                const row = document.createElement('tr');
+                row.className = "table-row-hover transition-colors group border-b border-[#334155] last:border-0";
+                
+                row.innerHTML = `
+                    <td class="table-cell pl-8">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-[#334155] flex items-center justify-center text-xs text-slate-300 font-bold shrink-0 shadow-inner">
+                                ${event.category.substring(0,2).toUpperCase()}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-slate-200 font-semibold truncate max-w-[240px] group-hover:text-white transition-colors text-base">${event.title}</div>
+                                <div class="text-xs text-slate-500 font-medium mt-0.5 opacity-80">${event.category}</div>
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <td class="table-cell">
+                        <div class="flex flex-col gap-1.5 w-full max-w-[100px]">
+                            <span class="text-slate-300 font-mono text-sm tracking-tight">${formatVolume(event.volume)}</span>
+                            <div class="h-1.5 w-full bg-[#334155] rounded-full overflow-hidden">
+                                <div class="h-full bg-slate-500 rounded-full opacity-60" style="width: ${liquidityPct}%"></div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="table-cell text-slate-400 font-mono text-sm">
+                        ${new Date(event.endDate).toLocaleDateString(undefined, {month:'short', day:'numeric'})}
+                    </td>
+                    
+                    <td class="table-cell text-right font-mono">
+                        <div class="flex justify-end gap-2 text-sm">
+                            <span class="text-emerald-400 font-medium">${formatPercent(event.pmYes)}</span>
+                            <span class="text-slate-600">/</span>
+                            <span class="text-red-400 font-medium">${formatPercent(event.pmNo)}</span>
+                        </div>
+                    </td>
+                    <td class="table-cell text-right font-mono">
+                        <div class="flex justify-end gap-2 text-sm">
+                            <span class="text-emerald-400 font-medium">${formatPercent(event.otYes)}</span>
+                            <span class="text-slate-600">/</span>
+                            <span class="text-red-400 font-medium">${formatPercent(event.otNo)}</span>
+                        </div>
+                    </td>
+
+                    <td class="table-cell text-right">
+                        <div class="flex items-center justify-end font-mono text-base ${spreadColor}">
+                            ${fire} ${arb.profit > 0 ? '+' : ''}${profitPct}%
+                        </div>
+                        ${isProfitable ? `<div class="text-[10px] text-violet-400 mt-1 font-bold tracking-wide">${arb.strategy}</div>` : ''}
+                    </td>
+
+                    <td class="table-cell text-right pr-8">
+                        <div class="flex justify-end gap-2 items-center">
+                            <a href="#" class="h-8 px-3 rounded-md bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 hover:border-blue-500/40 text-blue-400 text-xs font-bold flex items-center transition-all group-btn" title="Trade on Polymarket">
+                                PM <span class="ml-1 opacity-70">↗</span>
+                            </a>
+                            <a href="#" class="h-8 px-3 rounded-md bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 text-purple-400 text-xs font-bold flex items-center transition-all group-btn" title="Trade on OpinionTrade">
+                                OT <span class="ml-1 opacity-70">↗</span>
+                            </a>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function renderPagination(totalEvents) {
+            paginationContainer.innerHTML = '';
+            const totalPages = Math.ceil(totalEvents / EVENTS_PER_PAGE);
+            if (totalEvents === 0) { pageInfoDisplay.innerText = "0 items"; return; }
+            const start = (currentPage - 1) * EVENTS_PER_PAGE + 1;
+            const end = Math.min(currentPage * EVENTS_PER_PAGE, totalEvents);
+            pageInfoDisplay.innerText = `显示 ${start}-${end} / 共 ${totalEvents} 条`;
+            if (totalPages <= 1) return;
+
+            const createBtn = (text, onClick, disabled) => {
+                const btn = document.createElement('button');
+                btn.innerHTML = text;
+                btn.className = `px-4 py-1.5 rounded-lg border text-sm font-medium transition-all ${disabled ? 'border-transparent text-slate-600 cursor-not-allowed' : 'border-[#334155] bg-[#1e293b] text-slate-300 hover:text-white hover:border-slate-500 hover:bg-[#334155] shadow-sm'}`;
+                btn.disabled = disabled; btn.onclick = onClick; return btn;
+            };
+
+            paginationContainer.appendChild(createBtn('上一页 Prev', () => changePage(currentPage - 1), currentPage === 1));
+            const indicator = document.createElement('span'); indicator.className = "text-sm text-slate-500 font-mono px-3 font-semibold"; indicator.innerText = `${currentPage} / ${totalPages}`; paginationContainer.appendChild(indicator);
+            paginationContainer.appendChild(createBtn('下一页 Next', () => changePage(currentPage + 1), currentPage === totalPages));
+        }
+
+        function getFilteredEvents() { 
+            let filtered = allMatchedEvents;
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(e => e.category === currentCategory);
+            }
+            // ★★★ STRICT FILTER: ONLY SHOW EVENTS > 4% PROFIT ★★★
+            filtered = filtered.filter(e => e.maxProfit > PROFIT_THRESHOLD);
+            return filtered;
+        }
+        
+        function changePage(p) { currentPage = p; refreshView(); }
+        
+        function refreshView() { 
+            let filtered = getFilteredEvents(); 
+            filtered = sortEvents(filtered); 
+            const totalPages = Math.ceil(filtered.length / EVENTS_PER_PAGE); 
+            if (currentPage > totalPages && totalPages > 0) currentPage = 1; 
+            if (currentPage < 1) currentPage = 1; 
+            const start = (currentPage - 1) * EVENTS_PER_PAGE; 
+            const slice = filtered.slice(start, start + EVENTS_PER_PAGE); 
+            renderTable(slice); 
+            renderPagination(filtered.length);
+            updateTicker(allMatchedEvents); 
+        }
+        
+        async function refreshData() { 
+            if (countdownTimer) clearInterval(countdownTimer); 
+            loadingIndicator.classList.remove('hidden'); 
+            
+            try { 
+                allMatchedEvents = await fetchAndMatchData(); 
+                refreshView(); 
+                fetchGasPrices().catch(e => console.warn("Gas fetch failed silently"));
+            } catch (e) { 
+                console.error("Fatal Error:", e); 
+            } finally { 
+                loadingIndicator.classList.add('hidden'); 
+                startCountdown(); 
+            } 
+        }
+        
+        function startCountdown() { timeLeft = REFRESH_INTERVAL_SECONDS; updateTimer(); countdownTimer = setInterval(() => { timeLeft--; updateTimer(); if (timeLeft <= 0) refreshData(); }, 1000); }
+        function updateTimer() { countdownDisplay.innerText = timeLeft; }
+        window.onload = () => { initBinanceWS(); renderCategoryFilter(); refreshData(); };
+    </script>
+</body>
+
+</html>

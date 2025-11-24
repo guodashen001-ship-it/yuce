@@ -3,147 +3,385 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天眼预测 | 真实数据监控</title>
+    <title>天眼预测 SKYEYE | Deep Ocean Terminal</title>
     <meta name="description" content="Real-time arbitrage monitor for Polymarket and Opinion Trade">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入 Web3 常用字体组合 -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        /* Deep Ocean Dark Theme */
         :root {
-            --bg-base: #0f172a; --bg-card: #1e293b; --bg-hover: #334155; --border-color: #334155;
-            --text-primary: #f8fafc; --text-secondary: #cbd5e1; --text-muted: #94a3b8;
-            --up-green: #34d399; --down-red: #f87171; --brand-purple: #a78bfa;
+            /* 背景色：深海蓝黑 */
+            --bg-base: #0B0E14;       /* 极深蓝黑 */
+            --bg-card: #151921;       /* 卡片背景 */
+            --bg-hover: #1E232D;      /* 悬停高亮 */
+            --border-color: #2A303C;  /* 边框颜色 */
+            
+            /* 文字颜色：高亮白 */
+            --text-primary: #F8FAFC;  /* 亮白 */
+            --text-secondary: #94A3B8;/* 蓝灰 */
+            --text-muted: #64748B;    /* 暗灰 */
+            
+            /* 品牌色：电光青 & 极光紫 */
+            --brand-primary: #38BDF8; /* Sky Blue 400 */
+            --brand-glow: 0 0 20px rgba(56, 189, 248, 0.15);
+            --brand-gradient: linear-gradient(135deg, #0EA5E9 0%, #6366F1 100%);
+            
+            /* 涨跌色：荧光感 */
+            --up-green: #4ADE80;      /* Green 400 */
+            --up-bg: rgba(74, 222, 128, 0.1);
+            --down-red: #F87171;      /* Red 400 */
+            --down-bg: rgba(248, 113, 113, 0.1);
         }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-base); color: var(--text-primary); font-size: 15px; line-height: 1.5; }
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 数字专用字体，带等宽特性 */
+        .font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+        /* 隐藏滚动条但保留功能 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        .sniper-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .table-head-cell { color: var(--text-muted); font-size: 13px; font-weight: 600; padding: 14px 20px; text-align: left; border-bottom: 1px solid var(--border-color); background-color: #1e293b; }
-        .table-cell { padding: 12px 20px; font-size: 15px; border-top: 1px solid var(--border-color); vertical-align: middle; color: var(--text-secondary); }
-        .category-chip { background-color: #334155; border: 1px solid #475569; color: var(--text-secondary); transition: all 0.2s; font-size: 13px; }
-        .category-chip.active { background-color: rgba(139, 92, 246, 0.2); color: #c4b5fd; border-color: var(--brand-purple); }
-        .table-row-hover:hover { background-color: var(--bg-hover) !important; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Web3 卡片风格：深色磨砂 */
+        .web3-card {
+            background-color: var(--bg-card);
+            border-radius: 20px; 
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
         
+        /* 表格优化 */
+        .table-head-cell {
+            padding: 14px 24px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #11141A; /* 比卡片稍深 */
+            vertical-align: bottom;
+        }
+        
+        /* 双语表头排版 */
+        .th-box { display: flex; flex-direction: column; }
+        .th-cn {
+            font-size: 13px;
+            font-weight: 700;
+            color: #E2E8F0;
+            line-height: 1.2;
+        }
+        .th-en {
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            line-height: 1.2;
+            margin-top: 2px;
+        }
+
+        .table-cell {
+            padding: 18px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 1px solid #1A1E26;
+            vertical-align: middle;
+            color: #94A3B8;
+        }
+
+        /* 交互行 */
+        .table-row-hover:hover {
+            background-color: var(--bg-hover) !important;
+        }
+        .table-row-hover:hover td {
+            color: #FFFFFF;
+        }
+
+        /* 按钮：极光渐变 */
+        .btn-web3 {
+            background: var(--brand-gradient);
+            color: #fff;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+            transition: all 0.2s;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-web3:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+            filter: brightness(1.1);
+        }
+
+        /* 分类标签 */
+        .category-pill {
+            background-color: #11141A;
+            border: 1px solid var(--border-color);
+            color: #94A3B8;
+            transition: all 0.2s;
+            border-radius: 12px;
+            padding: 6px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+            text-align: center;
+        }
+        .category-pill:hover {
+            border-color: var(--brand-primary);
+            color: #FFFFFF;
+            background-color: rgba(56, 189, 248, 0.1);
+        }
+        .category-pill.active {
+            background: rgba(56, 189, 248, 0.15);
+            color: #38BDF8;
+            border-color: #38BDF8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+        .cat-cn { font-size: 12px; font-weight: 700; line-height: 1.2; }
+        .cat-en { font-size: 9px; font-weight: 600; text-transform: uppercase; opacity: 0.8; line-height: 1.2; margin-top: 1px; }
+
+        /* 搜索框 */
+        .input-web3 {
+            background-color: #0B0E14;
+            border: 1px solid var(--border-color);
+            color: #FFFFFF;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .input-web3:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+            outline: none;
+        }
+        .input-web3::placeholder { color: #475569; }
+
+        /* 跑马灯 */
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .animate-marquee { display: flex; width: max-content; animation: marquee 40s linear infinite; }
         .animate-marquee:hover { animation-play-state: paused; }
         
+        /* 工具提示 */
         .tooltip-container { position: relative; }
-        .tooltip { visibility: hidden; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); background: #0f172a; border: 1px solid #334155; padding: 4px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; z-index: 50; opacity: 0; transition: 0.2s; }
+        .tooltip { visibility: hidden; position: absolute; top: 120%; left: 50%; transform: translateX(-50%); background: #1F2937; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; white-space: nowrap; z-index: 50; opacity: 0; transition: 0.2s; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); border: 1px solid #374151; }
         .tooltip-container:hover .tooltip { visibility: visible; opacity: 1; }
         
-        /* Helper for truncated text */
         .truncate-multiline {
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;  
             overflow: hidden;
         }
+
+        /* 价格标签风格 */
+        .price-tag-green { background-color: var(--up-bg); color: var(--up-green); padding: 2px 6px; border-radius: 6px; font-weight: 700; font-family: 'IBM Plex Mono'; letter-spacing: -0.02em; border: 1px solid rgba(74, 222, 128, 0.2); }
+        .price-tag-red { background-color: var(--down-bg); color: var(--down-red); padding: 2px 6px; border-radius: 6px; font-weight: 700; font-family: 'IBM Plex Mono'; letter-spacing: -0.02em; border: 1px solid rgba(248, 113, 113, 0.2); }
+        
+        /* 小组件背景 */
+        .widget-bg {
+            background-color: #0B0E14;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+        }
+
+        /* 排序图标 */
+        .sort-icon { color: #475569; transition: color 0.2s; }
+        .table-head-cell:hover .sort-icon { color: var(--text-primary); }
+        .sort-active .sort-icon { color: var(--brand-primary); opacity: 1 !important; }
+        .th-cn-active { color: var(--brand-primary); }
     </style>
 </head>
-<body class="antialiased min-h-screen flex flex-col selection:bg-violet-500/30">
+<body class="flex flex-col min-h-screen selection:bg-cyan-500/30 selection:text-cyan-50">
 
-    <!-- Navbar -->
-    <nav class="border-b border-[#334155] bg-[#0f172a]/90 backdrop-blur-md sticky top-0 z-50 shadow-sm relative z-[60]">
-        <div class="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-8">
+    <!-- 顶部导航栏 -->
+    <nav class="bg-[#0B0E14]/90 backdrop-blur-xl border-b border-[#2A303C] sticky top-0 z-50">
+        <div class="max-w-[1800px] mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-12">
+                <!-- Logo -->
                 <div class="flex items-center gap-3 select-none cursor-pointer group" onclick="location.reload()">
-                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     </div>
                     <div>
-                        <span class="text-xl font-bold tracking-tight text-white block leading-tight">天眼<span class="text-violet-400">预测</span></span>
-                        <span class="text-[11px] font-medium text-slate-400 block leading-tight tracking-wider">WEB3 DATA TERMINAL</span>
+                        <span class="text-xl font-extrabold tracking-tight text-white block leading-none">天眼<span class="text-cyan-400">预测</span></span>
+                        <span class="text-[10px] font-bold text-slate-500 block leading-tight tracking-[0.15em] uppercase mt-1.5">Web3 Data Terminal</span>
                     </div>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-                <div class="hidden xl:flex items-center gap-3 px-4 py-2 bg-[#1e293b] rounded-lg border border-[#334155] text-sm font-mono shadow-sm">
-                    <div class="flex items-center gap-2 border-r border-[#334155] pr-3">
-                        <span class="text-slate-300 font-bold">USDC/USDT</span>
+                <!-- Market Data Widgets -->
+                <!-- 修改：将显示顺序改为 Gas -> Price，使用 hidden lg:flex 确保在笔记本上也能看到 -->
+                <div class="hidden lg:flex items-center bg-[#0B0E14] px-3 py-2 rounded-2xl border border-[#2A303C] divide-x divide-[#1E232D]">
+                    
+                    <!-- 1. Polygon Gas -->
+                    <div class="flex flex-col items-start px-4">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_4px_purple]"></span>
+                            <span class="text-[10px] font-bold text-slate-500">POL GAS</span>
+                        </div>
+                        <span id="poly-gwei" class="text-xs font-mono font-bold text-white mt-0.5">--</span>
                     </div>
-                    <span id="binance-price" class="text-white font-bold text-base transition-colors duration-300">--</span>
+
+                    <!-- 2. BSC Gas -->
+                    <div class="flex flex-col items-start px-4">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 shadow-[0_0_4px_orange]"></span>
+                            <span class="text-[10px] font-bold text-slate-500">BSC GAS</span>
+                        </div>
+                        <span id="bsc-gwei" class="text-xs font-mono font-bold text-white mt-0.5">--</span>
+                    </div>
+
+                    <!-- 3. Binance Price (最右侧，紧邻刷新按钮) -->
+                    <div class="flex flex-col items-start px-4 relative group">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wide flex items-center gap-1">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Binance_Logo.svg" class="w-3 h-3 opacity-80 grayscale" alt="Binance">
+                            USDC/USDT
+                        </span>
+                        <span id="binance-price" class="text-xs font-mono font-bold text-white mt-0.5 transition-colors duration-300">Loading...</span>
+                    </div>
                 </div>
 
-                <div class="hidden lg:flex items-center gap-2">
-                    <div class="tooltip-container flex flex-col items-end justify-center px-3 py-1 bg-[#1e293b] rounded-lg border border-[#334155] text-xs cursor-help">
-                        <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-purple-500"></span><span class="text-slate-400 font-bold">Polygon</span></div>
-                        <div class="flex items-center gap-2 mt-0.5 font-mono"><span id="poly-gwei" class="text-purple-300">--</span></div>
-                        <div class="tooltip">Realtime Gwei</div>
+                <button onclick="refreshData()" class="group flex items-center gap-2 px-5 py-2.5 btn-web3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    <div class="flex flex-col items-start leading-none">
+                        <span class="text-xs font-bold">刷新</span>
+                        <span class="text-[8px] font-medium opacity-80 tracking-wider">REFRESH</span>
                     </div>
-                </div>
-
-                <button onclick="refreshData()" class="group flex items-center gap-3 px-5 py-2 rounded-lg text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 group-hover:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    <span>刷新数据</span>
                 </button>
             </div>
         </div>
     </nav>
 
-    <!-- Ticker -->
-    <div class="relative w-full bg-[#1e1b4b] border-b border-violet-500/20 h-10 flex items-center overflow-hidden shadow-md z-50">
-        <div class="z-20 bg-[#1e1b4b] px-4 h-full flex items-center border-r border-violet-500/30 text-violet-300 text-xs font-bold uppercase tracking-widest shrink-0">
-            <span class="animate-pulse mr-2 text-orange-400">●</span> ⚡ 实时机会
+    <!-- Alert Bar -->
+    <div class="relative w-full bg-[#0B0E14] border-b border-[#2A303C] h-9 flex items-center overflow-hidden z-40">
+        <div class="z-20 bg-[#0B0E14] px-6 h-full flex items-center border-r border-[#2A303C] text-cyan-400 text-[10px] font-extrabold uppercase tracking-widest shrink-0">
+            <span class="relative flex h-2 w-2 mr-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+            </span>
+            实时监控 / LIVE MONITOR
         </div>
         <div class="flex-1 overflow-hidden h-full flex items-center relative">
             <div id="ticker-track" class="animate-marquee flex items-center gap-0">
-                <div class="px-4 text-slate-400 text-sm">正在初始化连接...</div>
+                <div class="px-6 text-slate-500 text-[10px] font-bold font-mono tracking-wide">INITIALIZING SYSTEM DATA STREAMS...</div>
             </div>
         </div>
     </div>
 
-    <!-- Main -->
-    <main class="flex-1 max-w-[1600px] w-full mx-auto px-6 py-8">
-        <div class="flex flex-col gap-6 mb-8">
+    <!-- Main Content -->
+    <main class="flex-1 max-w-[1800px] w-full mx-auto px-6 py-8">
+        
+        <!-- Control Panel -->
+        <div class="flex flex-col gap-8 mb-8">
             <div class="flex flex-col md:flex-row justify-between items-end gap-6">
                 <div>
-                    <h1 class="text-3xl font-bold text-white flex items-center gap-3 mb-2">
-                        PolyMarket vs OpinionTrade
+                    <h1 class="text-2xl font-extrabold text-white flex items-center gap-3 mb-2 tracking-tight">
+                        套利机会扫描
+                        <span class="text-base font-medium text-slate-500">/</span>
+                        <span class="text-lg font-bold text-slate-400">Arbitrage Scanner</span>
                     </h1>
-                    <p class="text-slate-400 text-base flex items-center gap-3">
-                        <span id="data-status" class="text-emerald-400 font-bold bg-emerald-900/30 px-2 py-0.5 rounded border border-emerald-500/30 text-xs">初始化...</span>
+                    <p class="text-slate-500 text-xs flex items-center gap-3 font-medium">
+                        <span id="data-status" class="bg-[#151921] text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold border border-[#2A303C] uppercase">Connecting...</span>
                         <span class="text-slate-600">|</span>
-                        刷新倒计时: <span id="countdown" class="text-emerald-400 font-mono font-bold text-lg">30</span>s
+                        <span class="text-cyan-400 font-bold bg-cyan-950/30 px-2 py-0.5 rounded border border-cyan-900/50">利润 > 4.0% (Profit)</span>
+                        <span class="text-slate-600">|</span>
+                        <span class="text-slate-400">自动刷新: <span id="countdown" class="font-mono font-bold text-cyan-400">30</span>s</span>
                     </p>
                 </div>
-                <div class="relative w-full md:w-80">
-                    <input id="search-input" type="text" placeholder="搜索事件 / Search..." class="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-4 py-3 pl-11 text-sm text-white focus:outline-none focus:border-violet-500 transition-all placeholder-slate-500">
-                    <svg class="w-5 h-5 text-slate-500 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                
+                <div class="relative w-full md:w-[400px]">
+                    <input id="search-input" type="text" placeholder="搜索 / Search..." class="input-web3 w-full px-4 py-3 pl-10 text-sm font-medium placeholder-slate-600 shadow-sm">
+                    <svg class="w-4 h-4 text-slate-600 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-3" id="category-filters"></div>
+            
+            <!-- Category Tabs -->
+            <div class="flex flex-wrap gap-2" id="category-filters"></div>
         </div>
 
-        <div id="arbitrage-table-container" class="sniper-card overflow-hidden min-h-[600px] relative">
-            <div id="loading-indicator" class="absolute inset-0 z-20 bg-[#0f172a]/90 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div class="w-12 h-12 border-4 border-violet-500/30 rounded-full animate-spin border-t-violet-500"></div>
-                <div class="mt-4 text-violet-300 font-mono text-sm">正在连接全球节点...</div>
-                <div class="mt-2 text-slate-500 text-xs">尝试 Vercel / CorsProxy / AllOrigins</div>
+        <!-- Main Data Card -->
+        <div id="arbitrage-table-container" class="web3-card overflow-hidden min-h-[600px] relative">
+            
+            <div id="loading-indicator" class="absolute inset-0 z-20 bg-[#0B0E14]/90 backdrop-blur-sm flex flex-col items-center justify-center">
+                <div class="relative">
+                    <div class="w-10 h-10 border-3 border-[#2A303C] rounded-full"></div>
+                    <div class="w-10 h-10 border-3 border-cyan-500 rounded-full animate-spin absolute top-0 left-0 border-t-transparent"></div>
+                </div>
+                <div class="mt-4 text-cyan-400 font-bold text-[10px] tracking-[0.2em] uppercase">LOADING DATA...</div>
             </div>
 
             <div class="overflow-x-auto">
                 <table class="min-w-full w-full border-collapse">
-                    <thead class="bg-[#1e293b] sticky top-0 z-10 shadow-md">
+                    <thead class="sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th class="table-head-cell pl-8 w-[30%]">事件 / 市场</th>
-                            <th class="table-head-cell w-[12%]">流动性</th>
-                            <th class="table-head-cell w-[12%] cursor-pointer hover:bg-[#334155]" onclick="toggleSort('time')">结束时间 ↕</th>
-                            <th class="table-head-cell text-right w-[13%]">Polymarket (Y/N)</th>
-                            <th class="table-head-cell text-right w-[13%]">OpinionTrade (Y/N)</th>
-                            <th class="table-head-cell text-right w-[10%] cursor-pointer hover:bg-[#334155]" onclick="toggleSort('profit')">价差 ↕</th>
-                            <th class="table-head-cell text-right pr-8 w-[10%]">操作</th>
+                            <th class="table-head-cell pl-8 w-[32%]">
+                                <div class="th-box">
+                                    <span class="th-cn">事件名称</span>
+                                    <span class="th-en">Market / Event</span>
+                                </div>
+                            </th>
+                            <th class="table-head-cell w-[10%]">
+                                <div class="th-box">
+                                    <span class="th-cn">交易量 (24h)</span>
+                                    <span class="th-en">Volume</span>
+                                </div>
+                            </th>
+                            
+                            <th class="table-head-cell w-[12%] cursor-pointer hover:bg-[#1E232D] transition-colors group" onclick="toggleSort('time')" id="header-time">
+                                <div class="flex items-center gap-1">
+                                    <div class="th-box">
+                                        <span class="th-cn group-hover:text-cyan-400 transition-colors">结束时间</span>
+                                        <span class="th-en">End Date</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="sort-icon w-3 h-3 text-slate-600 group-hover:text-cyan-400 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                </div>
+                            </th>
+                            
+                            <th class="table-head-cell text-right w-[13%]">
+                                <div class="th-box items-end">
+                                    <span class="th-cn">Polymarket</span>
+                                    <span class="th-en">Yes / No</span>
+                                </div>
+                            </th>
+                            <th class="table-head-cell text-right w-[13%]">
+                                <div class="th-box items-end">
+                                    <span class="th-cn">OpinionTrade</span>
+                                    <span class="th-en">Yes / No</span>
+                                </div>
+                            </th>
+                            
+                            <th class="table-head-cell text-right w-[10%] cursor-pointer hover:bg-[#1E232D] transition-colors group" onclick="toggleSort('profit')" id="header-profit">
+                                <div class="flex items-center justify-end gap-1">
+                                    <div class="th-box items-end">
+                                        <span class="th-cn group-hover:text-cyan-400 transition-colors">套利空间</span>
+                                        <span class="th-en">Spread</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="sort-icon w-3 h-3 text-slate-600 group-hover:text-cyan-400 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                </div>
+                            </th>
+                            
+                            <th class="table-head-cell text-right pr-8 w-[10%]">
+                                <div class="th-box items-end">
+                                    <span class="th-cn">操作</span>
+                                    <span class="th-en">Action</span>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
-                    <tbody id="arbitrage-data" class="divide-y divide-[#334155]"></tbody>
+                    <tbody id="arbitrage-data" class="divide-y divide-[#1A1E26]"></tbody>
                 </table>
             </div>
         </div>
 
-        <div class="mt-6 flex flex-col sm:flex-row justify-between items-center gap-6 text-slate-500">
-            <div id="page-info" class="font-mono text-sm">Waiting for data...</div>
+        <!-- Pagination -->
+        <div class="mt-6 flex justify-between items-center text-slate-500 border-t border-[#2A303C] pt-4">
+            <div id="page-info" class="font-mono text-[10px] font-bold bg-[#151921] px-3 py-1.5 rounded border border-[#2A303C] shadow-sm">LOADING...</div>
             <div id="pagination-container" class="flex items-center gap-2"></div>
         </div>
     </main>
@@ -154,14 +392,15 @@
         const PROFIT_THRESHOLD = 0.04;
         const EVENTS_PER_PAGE = 15;
         
+        // Vercel Proxy Routes (Matched by vercel.json)
         const PM_API = "/api/polymarket/events?limit=50&active=true&closed=false&order=volume&ascending=false";
         const OT_API = "/api/opinion/markets"; 
 
-        const PROXY_BASE = "https://corsproxy.io/?";
-        const PROXY_BACKUP = "https://api.allorigins.win/get?url="; // Added backup
-
+        // Fallback Direct URLs (For local testing or if proxy fails)
         const DIRECT_PM_API = "https://gamma-api.polymarket.com/events?limit=50&active=true&closed=false&order=volume&ascending=false";
         const DIRECT_OT_API = "https://api.opinion.trade/v1/markets";
+
+        const PROXY_BASE = "https://corsproxy.io/?";
 
         // ================= STATE =================
         let allEvents = [];
@@ -174,48 +413,31 @@
 
         // ================= CORE FUNCTIONS =================
 
-        // Robust Fetch: Vercel -> CorsProxy -> AllOrigins
         async function fetchWithFallback(vercelUrl, directUrl) {
-            // 1. Vercel Proxy
             try {
                 const res = await fetch(vercelUrl);
                 const contentType = res.headers.get("content-type");
                 if (res.ok && contentType && contentType.includes("application/json")) {
-                    connectionStatus.mode = 'Vercel Proxy';
+                    connectionStatus.mode = 'Vercel';
                     return await res.json();
                 }
             } catch (e) { }
 
-            // 2. CorsProxy.io (Faster)
             try {
                 const proxyUrl = PROXY_BASE + encodeURIComponent(directUrl);
                 const res = await fetch(proxyUrl);
                 if (res.ok) {
-                    connectionStatus.mode = 'Public Proxy';
+                    connectionStatus.mode = 'Proxy';
                     return await res.json();
                 }
-            } catch (e) { }
-
-            // 3. AllOrigins (Backup)
-            try {
-                const proxyUrl = PROXY_BACKUP + encodeURIComponent(directUrl);
-                const res = await fetch(proxyUrl);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.contents) {
-                        connectionStatus.mode = 'Backup Proxy';
-                        return JSON.parse(json.contents);
-                    }
-                }
-            } catch (e) { 
-                console.warn("All proxies failed for", directUrl);
+            } catch (e) {
+                console.warn("Fetch failed for", directUrl);
             }
             return null;
         }
 
         async function loadData() {
             document.getElementById('loading-indicator').classList.remove('hidden');
-            
             try {
                 const [pmDataRaw, otDataRaw] = await Promise.all([
                     fetchWithFallback(PM_API, DIRECT_PM_API),
@@ -236,15 +458,10 @@
                     allEvents = processPolymarketData(pmList, otDataRaw);
                     renderView();
                 } else {
-                    document.getElementById('arbitrage-data').innerHTML = `<tr><td colspan="7" class="py-20 text-center text-slate-500">
-                        <div class="text-red-400 mb-2 font-bold">连接失败</div>
-                        <div class="text-xs opacity-60">无法从任何节点获取数据。请检查网络或 Vercel 配置。</div>
-                        <button onclick="refreshData()" class="mt-4 px-4 py-2 bg-slate-700 rounded text-xs hover:bg-slate-600">重试</button>
-                    </td></tr>`;
+                    document.getElementById('arbitrage-data').innerHTML = `<tr><td colspan="7" class="py-24 text-center text-slate-400 font-medium text-xs">NO DATA SOURCE DETECTED</td></tr>`;
                 }
-            } catch (e) {
-                console.error("Fatal Error:", e);
-            } finally {
+            } catch (e) { console.error("Fatal Error:", e); } 
+            finally {
                 document.getElementById('loading-indicator').classList.add('hidden');
                 resetTimer();
             }
@@ -252,20 +469,22 @@
 
         function updateStatusUI() {
             const el = document.getElementById('data-status');
+            let text = "OFFLINE";
+            let colorClass = "text-red-500 bg-red-900/20 border-red-900";
+
             if (connectionStatus.pm && connectionStatus.ot) {
-                el.innerHTML = `PM: 🟢 | OT: 🟢 | ${connectionStatus.mode}`;
-                el.className = "text-emerald-400 font-bold bg-emerald-900/30 px-2 py-0.5 rounded border border-emerald-500/30 text-[10px]";
-            } else {
-                el.innerHTML = `PM: ${connectionStatus.pm?'🟢':'🔴'} | OT: ${connectionStatus.ot?'🟢':'🟠(模拟)'} | ${connectionStatus.mode}`;
-                el.className = "text-orange-400 font-bold bg-orange-900/30 px-2 py-0.5 rounded border border-orange-500/30 text-[10px]";
+                text = `ONLINE [${connectionStatus.mode}]`;
+                colorClass = "text-emerald-400 bg-emerald-900/20 border-emerald-900";
+            } else if (connectionStatus.pm) {
+                text = "PARTIAL (PM ONLY)";
+                colorClass = "text-amber-400 bg-amber-900/20 border-amber-900";
             }
+            el.innerHTML = text; el.className = `px-2 py-0.5 rounded text-[10px] font-bold font-mono border uppercase ${colorClass}`;
         }
 
         function processPolymarketData(pmList, otDataRaw) {
             const processed = [];
             let otList = null;
-            
-            // Robust OT Data extraction
             if (otDataRaw) {
                 if (Array.isArray(otDataRaw)) otList = otDataRaw;
                 else if (otDataRaw.data && Array.isArray(otDataRaw.data)) otList = otDataRaw.data;
@@ -273,11 +492,9 @@
             }
 
             pmList.forEach(event => {
-                // Gamma API handling
                 if (!event.markets || event.markets.length === 0) return;
-                const market = event.markets[0]; // Primary market
+                const market = event.markets[0];
                 
-                // Price Extraction
                 let yesPrice = 0.5, noPrice = 0.5;
                 try {
                     let outcomePrices = market.outcomePrices;
@@ -288,11 +505,9 @@
                     }
                 } catch(e) {}
 
-                // OT Matching & Linking
                 let otYes = 0, otNo = 0;
-                let otUrl = "https://app.opinion.trade/"; // Default Fallback
+                let otUrl = "https://app.opinion.trade/markets";
                 let otMatched = false;
-
                 const pmTitle = (event.title || market.question || "").toLowerCase();
 
                 if (otList) {
@@ -303,11 +518,11 @@
 
                     if (match) {
                         otMatched = true;
-                        // Try to construct a specific OT URL
-                        if (match.slug) otUrl = `https://app.opinion.trade/markets/${match.slug}`;
-                        else if (match.id) otUrl = `https://app.opinion.trade/markets/${match.id}`;
-                        
-                        // Parse OT Prices
+                        const topicId = match.topicId || match.id || match.marketId || match._id;
+                        let type = match.type || 'binary';
+                        if (match.outcomes && match.outcomes.length > 2) type = 'multi';
+                        if (topicId) otUrl = `https://app.opinion.trade/detail?topicId=${topicId}&type=${type}`;
+
                         if (match.outcomes && match.outcomes.length >= 2) {
                             otYes = parseFloat(match.outcomes[0].price || 0);
                             otNo = parseFloat(match.outcomes[1].price || 0);
@@ -318,29 +533,24 @@
                     }
                 }
                 
-                // OT Search Fallback Link (If no match found)
                 if (!otMatched) {
-                    otUrl = `https://app.opinion.trade/search?q=${encodeURIComponent(pmTitle)}`;
+                    otUrl = `https://www.google.com/search?q=site:opinion.trade+${encodeURIComponent(pmTitle)}`;
                 }
 
-                // Hybrid Simulation (Only if OT API completely failed)
                 if ((!otList) && !connectionStatus.ot) {
                     const spread = (Math.random() * 0.10) - 0.05;
                     otYes = Math.min(0.99, Math.max(0.01, yesPrice + spread));
                     otNo = 1 - otYes;
+                    otUrl = `https://app.opinion.trade/markets`; 
                 }
 
-                // Calculation
                 const costA = yesPrice + otNo;
                 const costB = noPrice + otYes;
                 const maxProfit = Math.max(1 - costA, 1 - costB);
-                const strategy = (1 - costA) > (1 - costB) ? "Long PM / Short OT" : "Short PM / Long OT";
+                const strategy = (1 - costA) > (1 - costB) ? "Buy Yes (PM) / No (OT)" : "Buy No (PM) / Yes (OT)";
 
-                // PM Link Logic (Robust)
-                let pmLink = "https://polymarket.com/";
-                if (event.slug) pmLink = `https://polymarket.com/event/${event.slug}`;
-                else if (market.id) pmLink = `https://polymarket.com/market/${market.id}`;
-                else pmLink = `https://polymarket.com/search?q=${encodeURIComponent(event.title)}`;
+                const slug = event.slug; 
+                const pmLink = slug ? `https://polymarket.com/event/${slug}` : `https://polymarket.com/market/${market.id}`;
 
                 processed.push({
                     title: event.title || market.question,
@@ -349,22 +559,19 @@
                     pmYes: yesPrice, pmNo: noPrice, pmUrl: pmLink,
                     otYes: otYes, otNo: otNo, otUrl: otUrl,
                     volume: parseFloat(event.volume || market.volume || 0),
-                    liquidity: parseFloat(event.liquidity || market.liquidity || 0),
                     profit: maxProfit,
                     strategy: strategy
                 });
             });
-
             return processed;
         }
 
         function mapCategory(tag) {
             const t = tag.toLowerCase();
-            if (t.includes('pol') || t.includes('elect') || t.includes('trump')) return 'Politics';
-            if (t.includes('cryp') || t.includes('btc') || t.includes('eth')) return 'Crypto';
-            if (t.includes('sport') || t.includes('nba') || t.includes('soccer')) return 'Sports';
-            if (t.includes('bus') || t.includes('econ') || t.includes('fed')) return 'Business';
-            if (t.includes('pop') || t.includes('music')) return 'Pop Culture';
+            if (t.includes('pol') || t.includes('elect')) return 'Politics';
+            if (t.includes('cryp') || t.includes('btc')) return 'Crypto';
+            if (t.includes('sport')) return 'Sports';
+            if (t.includes('bus') || t.includes('econ')) return 'Business';
             return 'Crypto';
         }
 
@@ -381,13 +588,11 @@
             for (let i = 0; i <= s1.length; i++) {
                 let lastValue = i;
                 for (let j = 0; j <= s2.length; j++) {
-                    if (i == 0) costs[j] = j;
-                    else {
+                    if (i == 0) costs[j] = j; else {
                         if (j > 0) {
                             let newValue = costs[j - 1];
                             if (s1.charAt(i - 1) != s2.charAt(j - 1)) newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                            costs[j - 1] = lastValue;
-                            lastValue = newValue;
+                            costs[j - 1] = lastValue; lastValue = newValue;
                         }
                     }
                 }
@@ -404,7 +609,7 @@
                 const search = document.getElementById('search-input').value.toLowerCase();
                 if (search && !e.title.toLowerCase().includes(search)) return false;
                 if (currentCategory !== 'all' && e.category !== currentCategory) return false;
-                if (e.profit < PROFIT_THRESHOLD) return false; 
+                if (e.profit < PROFIT_THRESHOLD) return false;
                 return true;
             });
 
@@ -421,50 +626,55 @@
             const pageItems = filtered.slice(start, start + EVENTS_PER_PAGE);
 
             if (total === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center text-slate-500">
-                    <div class="mb-2">暂无高利润机会 (>4%)</div>
-                    <div class="text-xs opacity-50">正在持续扫描实时数据...</div>
+                tbody.innerHTML = `<tr><td colspan="7" class="py-24 text-center text-[#6B7280] font-mono text-xs">
+                    未发现高利润机会 / NO OPPORTUNITIES (> 4%)
                 </td></tr>`;
-                document.getElementById('page-info').innerText = "0 items";
+                document.getElementById('page-info').innerText = "0 ITEMS";
                 return;
             }
 
             pageItems.forEach(e => {
                 const profitPct = (e.profit * 100).toFixed(2);
                 const tr = document.createElement('tr');
-                tr.className = "table-row-hover transition-colors border-b border-[#334155] last:border-0 group";
+                tr.className = "table-row-hover transition-colors group border-b border-[#1A1D24] last:border-0";
                 tr.innerHTML = `
-                    <td class="table-cell pl-8">
-                        <div class="font-medium text-white truncate-multiline max-w-[280px]" title="${e.title}">${e.title}</div>
-                        <div class="text-xs text-slate-500 mt-1">${e.category}</div>
+                    <td class="table-cell pl-6">
+                        <div class="font-bold text-[#E5E7EB] truncate-multiline max-w-[300px] leading-tight" title="${e.title}">${e.title}</div>
+                        <div class="text-[10px] text-[#6B7280] mt-1.5 uppercase tracking-wider font-bold font-mono">${e.category}</div>
                     </td>
                     <td class="table-cell">
-                        <div class="text-xs text-slate-400 font-mono">$${(e.volume/1000).toFixed(1)}K Vol</div>
+                        <div class="text-xs text-[#9CA3AF] font-mono font-bold">$${(e.volume/1000).toFixed(1)}K</div>
                     </td>
-                    <td class="table-cell text-slate-400 text-xs font-mono">
+                    <td class="table-cell text-[#9CA3AF] text-xs font-mono font-medium">
                         ${new Date(e.endDate).toLocaleDateString()}
                     </td>
                     <td class="table-cell text-right font-mono text-xs">
-                        <span class="text-emerald-400">${(e.pmYes*100).toFixed(1)}%</span> / <span class="text-red-400">${(e.pmNo*100).toFixed(1)}%</span>
+                        <div class="font-bold text-[#E5E7EB]">
+                            <span class="text-[#34D399] mr-1">${(e.pmYes*100).toFixed(1)}%</span>
+                            <span class="text-[#F87171]">${(e.pmNo*100).toFixed(1)}%</span>
+                        </div>
                     </td>
                     <td class="table-cell text-right font-mono text-xs">
-                        <span class="text-emerald-400">${(e.otYes*100).toFixed(1)}%</span> / <span class="text-red-400">${(e.otNo*100).toFixed(1)}%</span>
+                        <div class="font-bold text-[#E5E7EB]">
+                            <span class="text-[#34D399] mr-1">${(e.otYes*100).toFixed(1)}%</span>
+                            <span class="text-[#F87171]">${(e.otNo*100).toFixed(1)}%</span>
+                        </div>
                     </td>
                     <td class="table-cell text-right">
-                        <div class="font-bold text-emerald-400 text-sm">+${profitPct}%</div>
-                        <div class="text-[10px] text-violet-400">${e.strategy}</div>
+                        <div class="badge-profit inline-block text-xs">+${profitPct}%</div>
+                        <div class="text-[9px] text-[#6B7280] uppercase tracking-wide mt-1 font-mono">${e.strategy}</div>
                     </td>
-                    <td class="table-cell text-right pr-8">
+                    <td class="table-cell text-right pr-6">
                         <div class="flex justify-end gap-2">
-                            <a href="${e.pmUrl}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white text-xs transition-all">PM</a>
-                            <a href="${e.otUrl}" target="_blank" rel="noopener noreferrer" class="px-2 py-1 rounded bg-purple-600/20 text-purple-400 hover:bg-purple-600 hover:text-white text-xs transition-all">OT</a>
+                            <a href="${e.pmUrl}" target="_blank" rel="noopener noreferrer" class="link-btn link-pm">PM ↗</a>
+                            <a href="${e.otUrl}" target="_blank" rel="noopener noreferrer" class="link-btn link-ot">OT ${e.otUrl.includes('google') ? '🔍' : '↗'}</a>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('page-info').innerText = `Showing ${start+1}-${Math.min(start+EVENTS_PER_PAGE, total)} of ${total}`;
+            document.getElementById('page-info').innerText = `${start+1}-${Math.min(start+EVENTS_PER_PAGE, total)} OF ${total}`;
             renderPagination(Math.ceil(total / EVENTS_PER_PAGE));
         }
 
@@ -473,35 +683,31 @@
             container.innerHTML = '';
             if (totalPages <= 1) return;
             
-            const prev = document.createElement('button');
-            prev.className = "px-3 py-1 rounded border border-slate-700 text-xs hover:bg-slate-800";
-            prev.innerText = "Prev";
-            prev.disabled = currentPage === 1;
-            prev.onclick = () => { currentPage--; renderView(); };
-            
-            const next = document.createElement('button');
-            next.className = "px-3 py-1 rounded border border-slate-700 text-xs hover:bg-slate-800";
-            next.innerText = "Next";
-            next.disabled = currentPage === totalPages;
-            next.onclick = () => { currentPage++; renderView(); };
-
-            container.append(prev, next);
+            const createBtn = (txt, onClick, disabled) => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded border border-[#2A303C] bg-[#181B21] text-xs font-bold text-[#9CA3AF] hover:text-white hover:border-[#4B5563] transition-colors ${disabled?'opacity-50 cursor-not-allowed':''}`;
+                btn.innerText = txt;
+                btn.disabled = disabled;
+                btn.onclick = onClick;
+                return btn;
+            };
+            container.append(createBtn("<", () => { currentPage--; renderView(); }, currentPage === 1));
+            container.append(createBtn(">", () => { currentPage++; renderView(); }, currentPage === totalPages));
         }
 
         function updateTicker(items) {
             const track = document.getElementById('ticker-track');
             if (items.length === 0) {
-                track.innerHTML = '<div class="px-4 text-slate-500 text-sm">等待高利润机会...</div>';
+                track.innerHTML = '<div class="px-4 text-[#6B7280] text-xs font-mono">NO HIGH PROFIT OPPORTUNITIES...</div>';
                 return;
             }
-            // Duplicate items for smooth marquee
-            const displayItems = items.slice(0, 5); 
+            const displayItems = items.slice(0, 8); 
             let html = '';
             displayItems.forEach(i => {
-                html += `<div class="flex items-center gap-2 px-6 py-2 border-r border-violet-500/20 cursor-pointer" onclick="window.open('${i.pmUrl}','_blank')">
-                    <span class="text-orange-400">🔥</span>
-                    <span class="text-white text-xs font-bold hover:text-emerald-400">${i.title.substring(0, 20)}...</span>
-                    <span class="text-emerald-400 font-mono text-xs">+${(i.profit*100).toFixed(1)}%</span>
+                html += `<div class="flex items-center gap-3 px-6 py-2 border-r border-[#2A303C] cursor-pointer hover:bg-[#1E232D] transition-colors" onclick="window.open('${i.pmUrl}','_blank')">
+                    <span class="text-[#F97316] text-xs">🔥</span>
+                    <span class="text-[#E5E7EB] text-xs font-bold uppercase tracking-wide">${i.title.substring(0, 20)}...</span>
+                    <span class="text-[#34D399] font-mono text-xs font-bold">+${(i.profit*100).toFixed(1)}%</span>
                 </div>`;
             });
             track.innerHTML = html + html; 
@@ -511,6 +717,11 @@
             if (sortConfig.col === col) sortConfig.dir = sortConfig.dir === 'asc' ? 'desc' : 'asc';
             else { sortConfig.col = col; sortConfig.dir = 'desc'; }
             renderView();
+            
+            document.getElementById('header-time').classList.remove('text-white');
+            document.getElementById('header-profit').classList.remove('text-white');
+            if (col === 'time') document.getElementById('header-time').classList.add('text-white');
+            if (col === 'profit') document.getElementById('header-profit').classList.add('text-white');
         }
 
         function resetTimer() {
@@ -523,45 +734,81 @@
             }, 1000);
         }
 
-        async function fetchExtras() {
+        // ================= EXTRAS =================
+        // WebSocket for Binance Price
+        async function initBinanceWS() {
+            const priceEl = document.getElementById('binance-price');
+            
+            // Initial fallback fetch
             try {
-                const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCUSDT');
-                const data = await res.json();
-                const p = parseFloat(data.price).toFixed(4);
-                const el = document.getElementById('binance-price');
-                el.innerText = p;
-                el.className = p > 1.0005 ? "text-emerald-400 font-bold" : (p < 0.9995 ? "text-red-400 font-bold" : "text-white font-bold");
+                 const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCUSDT');
+                 const data = await res.json();
+                 priceEl.innerText = parseFloat(data.price).toFixed(4);
             } catch(e) {}
 
+            const ws = new WebSocket('wss://stream.binance.com:9443/ws/usdcusdt@trade');
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    const price = parseFloat(data.p).toFixed(4);
+                    priceEl.innerText = price;
+                    priceEl.style.color = price > 1.0001 ? '#10B981' : (price < 0.9999 ? '#EF4444' : '#FFFFFF');
+                } catch (e) {}
+            };
+            
+            ws.onclose = () => { setTimeout(initBinanceWS, 5000); }; 
+        }
+
+        async function fetchExtras() {
+            // BSC Gas (RPC)
+            try {
+                const res = await fetch("https://binance.llamarpc.com", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 })
+                });
+                const data = await res.json();
+                const gwei = Math.floor(parseInt(data.result, 16) / 1e9);
+                document.getElementById('bsc-gwei').innerText = `${gwei} Gwei`;
+            } catch(e) {}
+
+            // Polygon Gas
             try {
                 const res = await fetch("https://gasstation.polygon.technology/v2");
                 const data = await res.json();
-                const gwei = Math.floor(data.fast.maxFee);
-                document.getElementById('poly-gwei').innerText = `${gwei} Gwei`;
+                document.getElementById('poly-gwei').innerText = `${Math.floor(data.fast.maxFee)} Gwei`;
             } catch(e) {}
         }
 
         window.onload = () => {
             loadData();
             fetchExtras();
+            initBinanceWS(); // Start WebSocket
+            
             document.getElementById('search-input').addEventListener('input', () => { currentPage=1; renderView(); });
             
-            // FIX: Proper Category Rendering
             const catContainer = document.getElementById('category-filters');
             catContainer.innerHTML = '';
-            ['All', 'Crypto', 'Politics', 'Sports'].forEach(c => {
+            const cats = [
+                {id: 'all', cn: '全部', en: 'All'},
+                {id: 'Crypto', cn: '加密', en: 'Crypto'},
+                {id: 'Politics', cn: '政治', en: 'Politics'},
+                {id: 'Sports', cn: '体育', en: 'Sports'},
+                {id: 'Business', cn: '经济', en: 'Business'},
+                {id: 'Pop Culture', cn: '流行', en: 'Pop'}
+            ];
+            
+            cats.forEach(c => {
                 const btn = document.createElement('button');
-                const isActive = c === (currentCategory === 'all' ? 'All' : currentCategory);
-                btn.className = `category-chip px-3 py-1 rounded-full text-xs mr-2 ${isActive ? 'active' : ''}`;
-                btn.innerText = c;
+                const isActive = c.id === (currentCategory === 'all' ? 'all' : currentCategory);
+                btn.className = `category-pill mr-2 ${isActive ? 'active' : ''}`;
+                btn.innerHTML = `<span class="cat-cn">${c.cn}</span><span class="cat-en">${c.en}</span>`;
                 btn.onclick = () => { 
-                    currentCategory = c === 'All' ? 'all' : c; 
+                    currentCategory = c.id; 
                     currentPage = 1; 
-                    // Re-render buttons to update active state
-                    Array.from(catContainer.children).forEach(child => {
-                        child.classList.remove('active');
-                        if (child.innerText === c) child.classList.add('active');
-                    });
+                    Array.from(catContainer.children).forEach(child => child.classList.remove('active'));
+                    btn.classList.add('active');
                     renderView(); 
                 };
                 catContainer.appendChild(btn);

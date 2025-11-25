@@ -82,7 +82,7 @@
                     </div>
                 </div>
 
-                <button onclick="refreshData()" class="btn-scan px-5 py-2 rounded-lg text-xs flex items-center gap-2">
+                <button onclick="forceRefresh()" class="btn-scan px-5 py-2 rounded-lg text-xs flex items-center gap-2 hover:scale-105 transition-transform">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                     REFRESH
                 </button>
@@ -97,7 +97,7 @@
         </div>
         <div class="flex-1 overflow-hidden h-full flex items-center relative">
             <div id="ticker-track" class="animate-marquee flex items-center gap-0">
-                <div class="px-6 text-slate-500 text-[11px] font-mono">Monitoring 7 Specific Pre-TGE Events for Maker Arbitrage...</div>
+                <div class="px-6 text-slate-500 text-[11px] font-mono">Stabilizing Connection...</div>
             </div>
         </div>
     </div>
@@ -119,7 +119,7 @@
         <div id="arbitrage-table-container" class="web3-card min-h-[500px] relative">
             <div id="loading-indicator" class="absolute inset-0 z-20 bg-[#050505]/90 backdrop-blur-sm flex flex-col items-center justify-center">
                 <div class="w-8 h-8 border-2 border-[#23262F] rounded-full border-t-cyan-500 animate-spin"></div>
-                <div class="mt-3 text-cyan-400 font-bold text-[10px] tracking-widest uppercase">Syncing Orderbooks...</div>
+                <div class="mt-3 text-cyan-400 font-bold text-[10px] tracking-widest uppercase">Connecting Nodes...</div>
             </div>
 
             <div class="overflow-x-auto">
@@ -144,7 +144,6 @@
     <script>
         const REFRESH_INTERVAL = 30;
         const PROXY_BASE = "https://corsproxy.io/?";
-        // Ticker Threshold: Only show > 3% in marquee
         const TICKER_THRESHOLD = 0.03; 
 
         // 7 Specific Events Config
@@ -159,39 +158,73 @@
         ];
 
         let allEvents = [];
+        let lastSuccessfulEvents = null; // Cache to prevent flickering
         let countdown = REFRESH_INTERVAL;
         let timer = null;
 
-        // Helper Fetch
-        async function fetchJson(url) {
-            try {
-                // Try Vercel proxy first
-                let res = await fetch(url);
-                if (res.ok && res.headers.get("content-type")?.includes("json")) return await res.json();
-            } catch(e) {}
-            try {
-                // Try Public Proxy
-                let res = await fetch(PROXY_BASE + encodeURIComponent(url));
-                if (res.ok) return await res.json();
-            } catch(e) {}
+        // Improved Fetch with Retry & Timeout
+        async function fetchJson(url, retries = 2) {
+            for (let i = 0; i <= retries; i++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+                    
+                    let fetchUrl = url;
+                    // Simple proxy logic: try direct first (for Vercel), then CORS proxy
+                    let res;
+                    try {
+                         res = await fetch(fetchUrl, { signal: controller.signal });
+                    } catch (e) {
+                         // Fallback to proxy if direct fails
+                         fetchUrl = PROXY_BASE + encodeURIComponent(url);
+                         res = await fetch(fetchUrl, { signal: controller.signal });
+                    }
+                    
+                    clearTimeout(timeoutId);
+                    if (res.ok) return await res.json();
+                } catch(e) {
+                    if (i === retries) console.warn(`Fetch failed after retries: ${url}`);
+                    await new Promise(r => setTimeout(r, 500)); // Wait before retry
+                }
+            }
             return null;
         }
 
-        // Load Data: Fetch 7 Gamma Events -> Fetch their CLOB orderbooks -> Fetch OT
+        // Throttled Fetcher for List to avoid rate limits
+        async function fetchAllTargets() {
+            const results = [];
+            // Fetch sequentially or in small batches to be nice to API/Proxy
+            for (const t of TARGETS) {
+                const data = await fetchJson(`https://gamma-api.polymarket.com/events?slug=${t.slug}`);
+                if (Array.isArray(data) && data[0]) {
+                    results.push(data[0]);
+                } else {
+                    results.push(null); // Placeholder to keep index alignment
+                }
+                // Tiny delay
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return results;
+        }
+
         async function loadData() {
-            document.getElementById('loading-indicator').classList.remove('hidden');
-            document.getElementById('data-status').innerText = "Fetching...";
+            // Only show full loader if we have NO data. If we have stale data, keep showing it with a warning.
+            if (!lastSuccessfulEvents) {
+                document.getElementById('loading-indicator').classList.remove('hidden');
+            } else {
+                document.getElementById('data-status').innerText = "Refreshing...";
+                document.getElementById('data-status').classList.remove("text-green-400");
+                document.getElementById('data-status').classList.add("text-yellow-500");
+            }
 
             try {
-                const pmPromises = TARGETS.map(t => 
-                    fetchJson(`https://gamma-api.polymarket.com/events?slug=${t.slug}`)
-                    .then(res => (Array.isArray(res) ? res[0] : null))
-                );
+                // 1. Fetch Metadata
+                const pmResults = await fetchAllTargets();
                 
-                const otPromise = fetchJson("https://api.opinion.trade/v1/markets");
-
-                const [pmResults, otDataRaw] = await Promise.all([Promise.all(pmPromises), otPromise]);
+                // 2. Fetch OT Data
+                const otDataRaw = await fetchJson("https://api.opinion.trade/v1/markets");
                 
+                // 3. Process OT Data
                 let otList = null;
                 if (otDataRaw) {
                     if (Array.isArray(otDataRaw)) otList = otDataRaw;
@@ -199,12 +232,20 @@
                     else if (otDataRaw.markets) otList = otDataRaw.markets;
                 }
 
+                // 4. Process PM Data & Fetch CLOB
                 const processed = [];
                 
                 for (let i = 0; i < pmResults.length; i++) {
                     const event = pmResults[i];
                     const target = TARGETS[i];
-                    if (!event) continue;
+                    
+                    // Handle missing event data gracefully
+                    if (!event) {
+                        if (lastSuccessfulEvents && lastSuccessfulEvents[i]) {
+                            processed.push(lastSuccessfulEvents[i]); // Use stale data for this item
+                        }
+                        continue; 
+                    }
 
                     const group = {
                         title: event.title,
@@ -218,6 +259,7 @@
                     let otMatch = null;
                     if (otList) otMatch = otList.find(o => o.id == target.otId || o.topicId == target.otId);
 
+                    // Fetch CLOB orderbooks in parallel for this event
                     const marketPromises = event.markets.map(m => fetchJson(`https://clob.polymarket.com/markets/${m.id}`));
                     const clobData = await Promise.all(marketPromises);
 
@@ -225,10 +267,11 @@
                         const clob = clobData[idx];
                         
                         let pmYesBid = 0, pmNoBid = 0;
-                        if (clob) {
-                            pmYesBid = parseFloat(clob.best_bid || 0);
+                        if (clob && clob.best_bid) {
+                            pmYesBid = parseFloat(clob.best_bid);
                             pmNoBid = clob.best_ask ? (1 - parseFloat(clob.best_ask)) : 0;
                         } else {
+                            // Fallback: Gamma prices
                             try {
                                 const prices = JSON.parse(m.outcomePrices);
                                 pmYesBid = parseFloat(prices[0]);
@@ -239,8 +282,9 @@
                         let otYesBid = 0, otNoBid = 0;
                         if (otMatch && otMatch.outcomes && otMatch.outcomes[idx]) {
                             let p = parseFloat(otMatch.outcomes[idx].price || 0);
-                            if (p > 0) otYesBid = p - 0.01; 
+                            if (p > 0) otYesBid = p - 0.01; // Est. Bid
                         } else {
+                            // Fallback Simulation ONLY if OT API failed
                             if (!otList) otYesBid = Math.max(0.01, pmYesBid + (Math.random() * 0.04 - 0.02));
                         }
                         otNoBid = 1 - (otYesBid + 0.02);
@@ -256,21 +300,34 @@
                             otYes: otYesBid, otNo: otNoBid,
                             profit: profit,
                             strat: strat,
-                            pmUrl: group.pmUrl // Pass parent URL for ticker click
+                            pmUrl: group.pmUrl 
                         });
                     });
 
                     processed.push(group);
                 }
                 
-                allEvents = processed;
-                renderView();
-                updateTicker(allEvents); // Update ticker here
-                document.getElementById('data-status').innerText = "Online";
-                document.getElementById('data-status').classList.add("text-green-400");
+                if (processed.length > 0) {
+                    allEvents = processed;
+                    lastSuccessfulEvents = processed; // Update Cache
+                    renderView();
+                    updateTicker(allEvents);
+                    
+                    const statusEl = document.getElementById('data-status');
+                    statusEl.innerText = "Online";
+                    statusEl.classList.remove("text-yellow-500", "text-red-500");
+                    statusEl.classList.add("text-green-400");
+                } else if (lastSuccessfulEvents) {
+                     // Keep showing old data but warn
+                     document.getElementById('data-status').innerText = "Stale Data (Retrying)";
+                     document.getElementById('data-status').classList.add("text-yellow-500");
+                }
+                
             } catch(e) {
                 console.error(e);
-                document.getElementById('data-status').innerText = "Error";
+                document.getElementById('data-status').innerText = "Connection Error";
+                document.getElementById('data-status').classList.add("text-red-500");
+                // If we have cache, keep it visible
             } finally {
                 document.getElementById('loading-indicator').classList.add('hidden');
                 resetTimer();
@@ -282,12 +339,11 @@
             tbody.innerHTML = '';
             
             if (allEvents.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center text-gray-500">No Data</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center text-gray-500">No Data Available</td></tr>`;
                 return;
             }
 
             allEvents.forEach((e, idx) => {
-                // Parent
                 const tr = document.createElement('tr');
                 tr.className = "bg-[#13161B] border-b border-[#23262F]";
                 tr.innerHTML = `
@@ -301,7 +357,6 @@
                 `;
                 tbody.appendChild(tr);
 
-                // Subs
                 e.subs.forEach(sub => {
                     const subTr = document.createElement('tr');
                     subTr.className = "hover:bg-[#1C1F26] border-b border-[#1A1D24] transition-colors";
@@ -332,12 +387,10 @@
             });
         }
 
-        // Ticker Logic: Filter > 3% profit
         function updateTicker(events) {
             const track = document.getElementById('ticker-track');
             let itemsHtml = '';
             let allSubs = [];
-            
             events.forEach(e => {
                 e.subs.forEach(sub => {
                     if(sub.profit > TICKER_THRESHOLD) {
@@ -347,23 +400,21 @@
             });
             
             if (allSubs.length === 0) {
-                track.innerHTML = '<div class="px-6 text-slate-500 text-xs font-mono">NO HIGH PROFIT OPPORTUNITIES (>3%) ...</div>';
+                track.innerHTML = '<div class="px-6 text-slate-500 text-xs font-mono">SCANNING... NO >3% ARB FOUND</div>';
                 return;
             }
             
-            // Sort by profit desc
             allSubs.sort((a,b) => b.profit - a.profit);
-            // Repeat content for smooth scroll if few items
-            const displayItems = allSubs.length < 5 ? [...allSubs, ...allSubs, ...allSubs] : allSubs;
+            const topItems = allSubs.slice(0, 10);
             
-            displayItems.forEach(i => {
+            topItems.forEach(i => {
                 itemsHtml += `<div class="flex items-center gap-3 px-8 py-2 border-r border-[#232730] cursor-pointer hover:bg-[#13161B] transition-colors bg-[#0A0C10]" onclick="window.open('${i.url}','_blank')">
                     <span class="text-orange-500 text-xs">🔥</span>
                     <span class="text-white text-xs font-bold uppercase tracking-wide">${i.title}</span>
                     <span class="text-emerald-400 font-mono text-xs font-bold">+${(i.profit*100).toFixed(1)}%</span>
                 </div>`;
             });
-            track.innerHTML = itemsHtml; 
+            track.innerHTML = itemsHtml + itemsHtml; // Duplicate for infinite scroll
         }
 
         function resetTimer() {
@@ -372,8 +423,16 @@
             timer = setInterval(() => {
                 countdown--;
                 document.getElementById('countdown').innerText = countdown;
-                if (countdown <= 0) loadData();
+                if (countdown <= 0) {
+                    countdown = REFRESH_INTERVAL; // Reset immediately visually
+                    loadData();
+                }
             }, 1000);
+        }
+        
+        function forceRefresh() {
+             document.getElementById('loading-indicator').classList.remove('hidden');
+             loadData();
         }
 
         // Extras
@@ -384,16 +443,21 @@
                  const data = await res.json();
                  priceEl.innerText = parseFloat(data.price).toFixed(4);
             } catch(e) {}
-            const ws = new WebSocket('wss://stream.binance.com:9443/ws/usdcusdt@trade');
-            ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    const price = parseFloat(data.p).toFixed(4);
-                    priceEl.innerText = price;
-                    priceEl.style.color = price > 1.0001 ? '#34D399' : (price < 0.9999 ? '#F87171' : '#FFFFFF');
-                } catch (e) {}
-            };
-            ws.onclose = () => { setTimeout(initBinanceWS, 5000); }; 
+            
+            let ws;
+            function connect() {
+                ws = new WebSocket('wss://stream.binance.com:9443/ws/usdcusdt@trade');
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        const price = parseFloat(data.p).toFixed(4);
+                        priceEl.innerText = price;
+                        priceEl.style.color = price > 1.0001 ? '#34D399' : (price < 0.9999 ? '#F87171' : '#FFFFFF');
+                    } catch (e) {}
+                };
+                ws.onclose = () => setTimeout(connect, 3000);
+            }
+            connect();
         }
 
         async function fetchExtras() {
@@ -412,7 +476,7 @@
         window.onload = () => {
             loadData(); fetchExtras(); initBinanceWS(); 
         };
-        function refreshData() { loadData(); fetchExtras(); }
+        function refreshData() { forceRefresh(); fetchExtras(); }
     </script>
 </body>
 </html>

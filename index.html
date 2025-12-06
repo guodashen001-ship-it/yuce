@@ -1,152 +1,221 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天眼预测 SKYEYE | Pre-TGE Maker Terminal</title>
-    <meta name="description" content="Real-time arbitrage monitor for Polymarket and Opinion Trade (Best Bid Mode)">
+    <title>天眼预测 SKYEYE | Arbitrage Monitor</title>
+    <meta name="description" content="Real-time arbitrage monitor for Polymarket and Opinion Trade">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-base: #050505; --bg-card: #0F1115; --bg-header: #16191F; --border-color: #23262F;
-            --text-primary: #FDFDFD; --text-secondary: #9CA3AF;
-            --up-green: #4ADE80; --up-bg: rgba(74, 222, 128, 0.1);
-            --down-red: #F87171; --down-bg: rgba(248, 113, 113, 0.1);
-            --brand-cyan: #22d3ee;
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        pm: '#2563EB',   // Polymarket Blue
+                        ot: '#9333EA',   // Opinion Purple
+                        dark: '#0B0E11',
+                        card: '#15191F',
+                        border: '#2A2F3A'
+                    }
+                }
+            }
         }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-base); color: var(--text-primary); font-size: 13px; }
-        .font-mono { font-family: 'IBM Plex Mono', monospace; }
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </script>
+    <style>
+        body { background-color: #050608; color: #E2E8F0; }
+        .glass-panel { background: rgba(21, 25, 31, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .glow-text-pm { text-shadow: 0 0 15px rgba(37, 99, 235, 0.5); }
+        .glow-text-ot { text-shadow: 0 0 15px rgba(147, 51, 234, 0.5); }
         
-        .web3-card { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.5); }
-        .table-head-cell { padding: 12px 24px; text-align: left; border-bottom: 1px solid var(--border-color); background-color: var(--bg-header); vertical-align: bottom; color: #6B7280; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        .table-cell { padding: 14px 24px; border-bottom: 1px solid #1C1F26; vertical-align: middle; color: #9CA3AF; }
-        .table-row-hover:hover { background-color: #1C1F26 !important; }
-        .table-row-hover:hover td { color: #FFFFFF; }
-        
-        .btn-scan { background: linear-gradient(90deg, #0EA5E9 0%, #6366F1 100%); color: #fff; box-shadow: 0 0 15px rgba(14, 165, 233, 0.3); transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1); font-weight: 600; }
-        .btn-scan:hover { transform: translateY(-1px); filter: brightness(1.1); }
-        
-        .price-bid { color: #38BDF8; font-weight: 700; } /* Blue for Bids */
-        
-        .link-btn { font-size: 10px; padding: 4px 10px; border-radius: 4px; font-weight: 600; transition: all 0.2s; border: 1px solid transparent; }
-        .link-pm { background: rgba(59, 130, 246, 0.1); color: #60A5FA; border-color: rgba(59, 130, 246, 0.2); }
-        .link-pm:hover { background: #2563EB; color: #fff; }
-        .link-ot { background: rgba(168, 85, 247, 0.1); color: #A78BFA; border-color: rgba(168, 85, 247, 0.2); }
-        .link-ot:hover { background: #7C3AED; color: #fff; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0B0E11; }
+        ::-webkit-scrollbar-thumb { background: #2A2F3A; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-        /* Widget */
-        .widget-bg { background: #0A0C10; border: 1px solid #23262F; border-radius: 8px; }
+        .scan-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+            opacity: 0; animation: scan 3s ease-in-out infinite; pointer-events: none;
+        }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+        .loader { border: 2px solid #1e293b; border-top: 2px solid #22d3ee; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .badge-pm { background: rgba(37, 99, 235, 0.15); color: #60A5FA; border: 1px solid rgba(37, 99, 235, 0.3); }
+        .badge-ot { background: rgba(147, 51, 234, 0.15); color: #C084FC; border: 1px solid rgba(147, 51, 234, 0.3); }
+        .badge-demo { background: rgba(234, 179, 8, 0.15); color: #FACC15; border: 1px solid rgba(234, 179, 8, 0.3); }
         
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        .animate-marquee { display: flex; width: max-content; animation: marquee 60s linear infinite; }
+        .price-up { color: #34D399; }
+        .price-down { color: #F87171; }
+        
+        /* Modal */
+        .modal-bg { background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); }
     </style>
 </head>
-<body class="flex flex-col min-h-screen selection:bg-cyan-900 selection:text-white">
+<body class="flex flex-col h-screen overflow-hidden selection:bg-cyan-500/30">
 
-    <!-- Navbar -->
-    <nav class="bg-[#050505]/95 backdrop-blur-md border-b border-[#23262F] sticky top-0 z-50">
-        <div class="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    </div>
+    <!-- Header -->
+    <header class="h-14 border-b border-border bg-dark/95 flex items-center justify-between px-6 shrink-0 z-50">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2 cursor-pointer group" onclick="location.reload()">
+                <div class="relative w-8 h-8 rounded bg-gradient-to-tr from-cyan-900 to-blue-900 flex items-center justify-center border border-white/10 overflow-hidden">
+                    <div class="scan-line"></div>
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors">SKYEYE <span class="opacity-50">ARBITRAGE</span></span>
+                    <span class="text-[10px] text-slate-500 font-mono">POLYMARKET × OPINION</span>
+                </div>
+            </div>
+            
+            <div class="hidden md:flex h-6 w-px bg-border mx-2"></div>
+            
+            <!-- API Status Indicators -->
+            <div class="hidden md:flex items-center gap-3 text-[10px] font-mono border border-border rounded-full px-3 py-1 bg-card">
+                <div class="flex items-center gap-1.5" title="Polymarket API Status">
+                    <div id="status-pm" class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                    <span class="text-slate-400">PM API</span>
+                </div>
+                <div class="w-px h-3 bg-border"></div>
+                <div class="flex items-center gap-1.5" title="Opinion Trade API Status">
+                    <div id="status-ot" class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                    <span class="text-slate-400">OT API</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div id="demo-badge" class="hidden items-center gap-1.5 px-2 py-1 rounded border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-[10px] font-bold tracking-wide animate-pulse cursor-help" title="Using simulated data because API connection failed">
+                <span>⚠️ DEMO MODE</span>
+            </div>
+
+            <div class="hidden lg:flex items-center gap-4 text-xs font-mono text-slate-500 bg-card border border-border rounded-lg px-3 py-1.5">
+                <div class="flex items-center gap-2">
+                    <span>ETH Gas:</span>
+                    <span id="gas-price" class="text-cyan-400">--</span>
+                </div>
+            </div>
+
+             <!-- Settings Toggle -->
+            <button onclick="toggleSettings()" class="text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+
+            <button onclick="forceRefresh()" id="refresh-btn" class="flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95 border border-white/10">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span id="timer-text">REFRESH</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden relative flex flex-col">
+        <!-- Ticker -->
+        <div class="h-8 bg-[#080A0D] border-b border-border flex items-center overflow-hidden shrink-0">
+            <div class="px-4 h-full flex items-center text-[10px] font-bold text-cyan-500 uppercase tracking-wider bg-[#080A0D] z-10 border-r border-border shrink-0">
+                Live Opportunities
+            </div>
+            <div class="flex-1 overflow-hidden relative group cursor-pointer">
+                <div id="ticker-content" class="flex items-center whitespace-nowrap animate-marquee hover:[animation-play-state:paused] px-4">
+                    <span class="text-slate-600 text-[10px] font-mono">Waiting for data stream...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="flex-1 overflow-auto p-6">
+            <div class="max-w-[1920px] mx-auto space-y-4">
+                
+                <!-- Info Banner -->
+                <div class="flex justify-between items-end pb-2">
                     <div>
-                        <span class="text-lg font-bold text-white tracking-tight block leading-none">天眼<span class="text-cyan-400">预测</span></span>
-                        <span class="text-[10px] font-bold text-slate-500 tracking-widest uppercase">Pre-TGE Monitor</span>
+                        <h2 class="text-lg font-bold text-white mb-1">Arbitrage Opportunities</h2>
+                        <p class="text-xs text-slate-500 font-mono">Comparing <span class="text-blue-400">Polymarket (CLOB)</span> vs <span class="text-purple-400">Opinion (API)</span> • Strategy: Buy YES on A, Buy NO on B</p>
                     </div>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <!-- Data Widget -->
-                <div class="hidden lg:flex items-center widget-bg px-3 py-1.5 gap-0 divide-x divide-[#23262F] h-9">
-                    <div class="flex items-center px-3 gap-2">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Binance_Logo.svg" class="w-3 h-3 opacity-80 grayscale" alt="Binance">
-                        <span class="text-[10px] font-bold text-slate-400">USDC</span>
-                        <span id="binance-price" class="text-xs font-mono font-bold text-cyan-400">--</span>
-                    </div>
-                    <div class="flex items-center px-3 gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                        <span class="text-[10px] font-bold text-slate-400">POL</span>
-                        <span id="poly-gwei" class="text-xs font-mono font-bold text-white">--</span>
-                    </div>
-                    <div class="flex items-center px-3 gap-2">
-                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                        <span class="text-[10px] font-bold text-slate-400">BSC</span>
-                        <span id="bsc-gwei" class="text-xs font-mono font-bold text-white">--</span>
-                    </div>
+                    <div id="last-updated" class="text-[10px] text-slate-600 font-mono">Last Update: --:--:--</div>
                 </div>
 
-                <button onclick="forceRefresh()" class="btn-scan px-5 py-2 rounded-lg text-xs flex items-center gap-2 hover:scale-105 transition-transform">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                    REFRESH
-                </button>
-            </div>
-        </div>
-    </nav>
+                <!-- Data Table -->
+                <div class="glass-panel rounded-xl overflow-hidden min-h-[400px] relative flex flex-col">
+                    
+                    <!-- Loading Overlay -->
+                    <div id="loading-overlay" class="absolute inset-0 bg-dark/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center transition-opacity duration-300">
+                        <div class="loader mb-4"></div>
+                        <div class="text-xs font-mono text-cyan-400 animate-pulse">SYNCING MARKETS...</div>
+                    </div>
 
-    <!-- Status Bar -->
-    <div class="relative w-full bg-[#0A0C10] border-b border-[#23262F] h-8 flex items-center overflow-hidden">
-        <div class="px-6 h-full flex items-center border-r border-[#23262F] text-cyan-400 text-[10px] font-bold uppercase tracking-widest shrink-0 z-10 bg-[#0A0C10]">
-            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse mr-2"></span> 实时监控
-        </div>
-        <div class="flex-1 overflow-hidden h-full flex items-center relative">
-            <div id="ticker-track" class="animate-marquee flex items-center gap-0">
-                <div class="px-6 text-slate-500 text-[11px] font-mono">Stabilizing Connection...</div>
-            </div>
-        </div>
-    </div>
+                    <!-- Table Header -->
+                    <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-[#11141A] border-b border-border text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 z-10">
+                        <div class="col-span-4">Market / Outcome</div>
+                        <div class="col-span-1 text-right">Liquidity</div>
+                        <div class="col-span-3 text-center grid grid-cols-2 gap-2">
+                            <span class="text-blue-500">Polymarket (Bid)</span>
+                            <span class="text-purple-500">Opinion (Bid)</span>
+                        </div>
+                        <div class="col-span-2 text-right">Spread / Profit</div>
+                        <div class="col-span-2 text-right">Action</div>
+                    </div>
 
-    <main class="flex-1 max-w-[1920px] w-full mx-auto px-6 py-8">
-        
-        <div class="flex justify-between items-end mb-6">
-            <div>
-                <h1 class="text-xl font-bold text-white mb-1">Target Assets (7)</h1>
-                <p class="text-slate-500 text-xs">
-                    显示买一价格 (Best Bid %) <span class="text-[#23262F]">|</span> 
-                    利润算法: 1 - (PM买一 + OT买一) <span class="text-[#23262F]">|</span>
-                    自动刷新: <span id="countdown" class="text-cyan-400 font-mono font-bold">30</span>s
-                </p>
-            </div>
-            <div class="text-xs font-mono text-slate-500" id="data-status">Connecting...</div>
-        </div>
-
-        <div id="arbitrage-table-container" class="web3-card min-h-[500px] relative">
-            <div id="loading-indicator" class="absolute inset-0 z-20 bg-[#050505]/90 backdrop-blur-sm flex flex-col items-center justify-center">
-                <div class="w-8 h-8 border-2 border-[#23262F] rounded-full border-t-cyan-500 animate-spin"></div>
-                <div class="mt-3 text-cyan-400 font-bold text-[10px] tracking-widest uppercase">Connecting Nodes...</div>
-            </div>
-
-            <div class="overflow-x-auto">
-                <table class="min-w-full w-full border-collapse">
-                    <thead class="sticky top-0 z-10">
-                        <tr>
-                            <th class="table-head-cell pl-8 w-[30%]">Event / Outcome</th>
-                            <th class="table-head-cell w-[10%]">Volume</th>
-                            <th class="table-head-cell w-[10%]">End Date</th>
-                            <th class="table-head-cell text-right w-[15%]">PM <span class="text-cyan-400">(Bid %)</span></th>
-                            <th class="table-head-cell text-right w-[15%]">OT <span class="text-cyan-400">(Bid %)</span></th>
-                            <th class="table-head-cell text-right w-[10%]">Maker Profit</th>
-                            <th class="table-head-cell text-right pr-8 w-[10%]">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="arbitrage-data" class="divide-y divide-[#1C1F26]"></tbody>
-                </table>
+                    <!-- Table Body -->
+                    <div id="market-list" class="divide-y divide-border font-mono text-xs">
+                        <!-- Rows injected by JS -->
+                    </div>
+                </div>
             </div>
         </div>
     </main>
 
-    <script>
-        const REFRESH_INTERVAL = 30;
-        const PROXY_BASE = "https://corsproxy.io/?";
-        const TICKER_THRESHOLD = 0.03; 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 modal-bg z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-[#1A1D24] border border-border rounded-xl w-full max-w-md p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-white font-bold">API Configuration</h3>
+                <button onclick="toggleSettings()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] text-slate-500 font-mono uppercase mb-1">Opinion Trade API Key</label>
+                    <input type="text" id="api-key-input" class="w-full bg-[#0B0E11] border border-border rounded px-3 py-2 text-xs text-white font-mono focus:border-purple-500 outline-none" placeholder="Enter API Key">
+                </div>
 
-        // 7 Specific Events Config
+                <div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded text-[10px] text-yellow-500">
+                    <p class="font-bold mb-1">⚠️ Connection Note:</p>
+                    <p>Due to CORS restrictions, this browser-based app uses a public proxy (corsproxy.io). If the API fails, the app will auto-switch to "Demo Mode".</p>
+                </div>
+
+                <div class="flex justify-end gap-2 mt-4">
+                    <button onclick="saveSettings()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded transition-colors">Save & Reconnect</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURATION =================
+        let CONFIG = {
+            REFRESH_INTERVAL: 15,
+            // Default key from user
+            OT_API_KEY: "DJg4rmYx93vuG0wtNfzDaBXHW7pWfEoP", 
+            PROXY_URL: "https://corsproxy.io/?",
+            ENDPOINTS: {
+                PM_GAMMA: "https://gamma-api.polymarket.com/events?slug=",
+                PM_CLOB: "https://clob.polymarket.com/markets/",
+                // Primary: Proxy endpoint provided in user code context
+                OT_API_PRIMARY: "https://proxy.opinion.trade:8443/openapi/market?status=activated&limit=100",
+                // Fallback: Standard API endpoint guessed
+                OT_API_BACKUP: "https://api.opinion.trade/openapi/market?status=activated&limit=100"
+            }
+        };
+
+        // Target Markets
         const TARGETS = [
             { slug: "lighter-market-cap-fdv-one-day-after-launch", otId: "88", title: "Lighter FDV" },
             { slug: "standx-fdv-above-one-day-after-launch", otId: "96", title: "StandX FDV" },
@@ -154,329 +223,394 @@
             { slug: "based-fdv-above-one-day-after-launch", otId: "97", title: "Based FDV" },
             { slug: "edgex-fdv-above-one-day-after-launch", otId: "98", title: "EdgeX FDV" },
             { slug: "backpack-fdv-above-one-day-after-launch", otId: "95", title: "Backpack FDV" },
-            { slug: "megaeth-market-cap-fdv-one-day-after-launch", otId: "67", title: "MegaETH FDV" }
+            { slug: "megaeth-market-cap-fdv-one-day-after-launch", otId: "67", title: "MegaETH FDV" },
+            { slug: "monad-token-launch-by-date", otId: "26", title: "Monad Launch Date" }
         ];
 
-        let allEvents = [];
-        let lastSuccessfulEvents = null; // Cache to prevent flickering
-        let countdown = REFRESH_INTERVAL;
-        let timer = null;
+        // State
+        let state = {
+            lastUpdate: null,
+            isFetching: false,
+            countdown: CONFIG.REFRESH_INTERVAL,
+            timerId: null,
+            data: [],
+            isDemoMode: false,
+            failureCount: 0
+        };
 
-        // Improved Fetch with Retry & Timeout
-        async function fetchJson(url, retries = 2) {
-            for (let i = 0; i <= retries; i++) {
-                try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-                    
-                    let fetchUrl = url;
-                    // Simple proxy logic: try direct first (for Vercel), then CORS proxy
-                    let res;
-                    try {
-                         res = await fetch(fetchUrl, { signal: controller.signal });
-                    } catch (e) {
-                         // Fallback to proxy if direct fails
-                         fetchUrl = PROXY_BASE + encodeURIComponent(url);
-                         res = await fetch(fetchUrl, { signal: controller.signal });
-                    }
-                    
-                    clearTimeout(timeoutId);
-                    if (res.ok) return await res.json();
-                } catch(e) {
-                    if (i === retries) console.warn(`Fetch failed after retries: ${url}`);
-                    await new Promise(r => setTimeout(r, 500)); // Wait before retry
-                }
-            }
-            return null;
+        // DOM Elements
+        const el = {
+            list: document.getElementById('market-list'),
+            loader: document.getElementById('loading-overlay'),
+            ticker: document.getElementById('ticker-content'),
+            pmStatus: document.getElementById('status-pm'),
+            otStatus: document.getElementById('status-ot'),
+            timer: document.getElementById('timer-text'),
+            lastUpdate: document.getElementById('last-updated'),
+            demoBadge: document.getElementById('demo-badge'),
+            modal: document.getElementById('settings-modal'),
+            apiKeyInput: document.getElementById('api-key-input')
+        };
+
+        // ================= UI CONTROL =================
+        function toggleSettings() {
+            el.modal.classList.toggle('hidden');
+            el.apiKeyInput.value = CONFIG.OT_API_KEY;
         }
 
-        // Throttled Fetcher for List to avoid rate limits
-        async function fetchAllTargets() {
-            const results = [];
-            // Fetch sequentially or in small batches to be nice to API/Proxy
-            for (const t of TARGETS) {
-                const data = await fetchJson(`https://gamma-api.polymarket.com/events?slug=${t.slug}`);
-                if (Array.isArray(data) && data[0]) {
-                    results.push(data[0]);
-                } else {
-                    results.push(null); // Placeholder to keep index alignment
-                }
-                // Tiny delay
-                await new Promise(r => setTimeout(r, 100));
+        function saveSettings() {
+            const newKey = el.apiKeyInput.value.trim();
+            if(newKey) {
+                CONFIG.OT_API_KEY = newKey;
+                // Reset failure count to try fresh
+                state.failureCount = 0; 
+                state.isDemoMode = false;
+                toggleSettings();
+                fetchMarketData();
             }
-            return results;
         }
 
-        async function loadData() {
-            // Only show full loader if we have NO data. If we have stale data, keep showing it with a warning.
-            if (!lastSuccessfulEvents) {
-                document.getElementById('loading-indicator').classList.remove('hidden');
-            } else {
-                document.getElementById('data-status').innerText = "Refreshing...";
-                document.getElementById('data-status').classList.remove("text-green-400");
-                document.getElementById('data-status').classList.add("text-yellow-500");
+        // ================= UTILS =================
+        const formatPct = (n) => (n * 100).toFixed(1) + '%';
+        
+        async function fetchWithTimeout(url, options = {}, timeout = 6000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(id);
+                return response;
+            } catch (error) {
+                clearTimeout(id);
+                throw error;
             }
+        }
+
+        // ================= DATA FETCHING =================
+        async function fetchMarketData() {
+            if (state.isFetching) return;
+            state.isFetching = true;
+            el.loader.classList.remove('opacity-0', 'pointer-events-none');
+            
+            updateStatus('pm', 'loading');
+            updateStatus('ot', 'loading');
 
             try {
-                // 1. Fetch Metadata
-                const pmResults = await fetchAllTargets();
-                
-                // 2. Fetch OT Data
-                const otDataRaw = await fetchJson("https://api.opinion.trade/v1/markets");
-                
-                // 3. Process OT Data
-                let otList = null;
-                if (otDataRaw) {
-                    if (Array.isArray(otDataRaw)) otList = otDataRaw;
-                    else if (otDataRaw.data) otList = otDataRaw.data;
-                    else if (otDataRaw.markets) otList = otDataRaw.markets;
-                }
+                // 1. Fetch OT Data
+                let otDataList = [];
 
-                // 4. Process PM Data & Fetch CLOB
-                const processed = [];
-                
-                for (let i = 0; i < pmResults.length; i++) {
-                    const event = pmResults[i];
-                    const target = TARGETS[i];
-                    
-                    // Handle missing event data gracefully
-                    if (!event) {
-                        if (lastSuccessfulEvents && lastSuccessfulEvents[i]) {
-                            processed.push(lastSuccessfulEvents[i]); // Use stale data for this item
-                        }
-                        continue; 
+                try {
+                    const otHeaders = { 'apikey': CONFIG.OT_API_KEY, 'Content-Type': 'application/json' };
+                    let res = null;
+                    let usedUrl = "";
+
+                    // Attempt 1: Proxy Primary
+                    try {
+                        usedUrl = CONFIG.PROXY_URL + encodeURIComponent(CONFIG.ENDPOINTS.OT_API_PRIMARY);
+                        res = await fetchWithTimeout(usedUrl, { headers: otHeaders });
+                    } catch(e) { console.log("Attempt 1 failed"); }
+
+                    // Attempt 2: Proxy Backup if Attempt 1 failed or returned error
+                    if (!res || !res.ok) {
+                        try {
+                            usedUrl = CONFIG.PROXY_URL + encodeURIComponent(CONFIG.ENDPOINTS.OT_API_BACKUP);
+                            console.log("Trying Backup URL:", usedUrl);
+                            res = await fetchWithTimeout(usedUrl, { headers: otHeaders });
+                        } catch(e) { console.log("Attempt 2 failed"); }
                     }
 
-                    const group = {
-                        title: event.title,
-                        volume: parseFloat(event.volume || 0),
-                        endDate: event.endDate,
-                        pmUrl: `https://polymarket.com/event/${target.slug}`,
-                        otUrl: `https://app.opinion.trade/detail?topicId=${target.otId}&type=multi`,
-                        subs: []
-                    };
+                    if (!res || !res.ok) {
+                        const status = res ? res.status : 'NetErr';
+                        throw new Error(`OT API Failed (${status})`);
+                    }
 
-                    let otMatch = null;
-                    if (otList) otMatch = otList.find(o => o.id == target.otId || o.topicId == target.otId);
+                    const text = await res.text();
+                    let json;
+                    try { json = JSON.parse(text); } catch(e) { throw new Error("OT Non-JSON Response"); }
 
-                    // Fetch CLOB orderbooks in parallel for this event
-                    const marketPromises = event.markets.map(m => fetchJson(`https://clob.polymarket.com/markets/${m.id}`));
-                    const clobData = await Promise.all(marketPromises);
+                    // Flexible Validation
+                    // Updated to check for errno: 0 based on user error logs
+                    if ((json.code === 0 || json.errno === 0) && Array.isArray(json.result?.list)) {
+                        otDataList = json.result.list;
+                    } else if (Array.isArray(json.data)) {
+                        otDataList = json.data;
+                    } else if (Array.isArray(json.list)) {
+                        otDataList = json.list;
+                    } else {
+                        // Sometimes the structure is different, let's log it
+                        console.warn("OT API Structure:", json);
+                        throw new Error("OT Invalid Format: " + JSON.stringify(json).substring(0, 100));
+                    }
 
-                    event.markets.forEach((m, idx) => {
-                        const clob = clobData[idx];
+                    state.isDemoMode = false;
+                    state.failureCount = 0;
+                    updateStatus('ot', 'online');
+
+                } catch (e) {
+                    console.error("OT Fetch Error:", e.message);
+                    state.failureCount++;
+                    updateStatus('ot', 'error');
+                    
+                    // Fallback to Demo Mode
+                    if (state.failureCount > 0) {
+                        state.isDemoMode = true;
+                    }
+                }
+
+                // 2. Fetch PM Data & Match
+                const results = [];
+                let pmDataFound = false;
+                
+                for (const target of TARGETS) {
+                    try {
+                        const pmRes = await fetchWithTimeout(`${CONFIG.ENDPOINTS.PM_GAMMA}${target.slug}`);
+                        if (!pmRes.ok) continue;
                         
-                        let pmYesBid = 0, pmNoBid = 0;
-                        if (clob && clob.best_bid) {
-                            pmYesBid = parseFloat(clob.best_bid);
-                            pmNoBid = clob.best_ask ? (1 - parseFloat(clob.best_ask)) : 0;
+                        const pmJson = await pmRes.json();
+                        if (!pmJson || !pmJson[0]) continue;
+                        
+                        const pmEvent = pmJson[0];
+                        pmDataFound = true;
+
+                        // Mock OT Data if in Demo Mode
+                        let otMatch = null;
+                        if (state.isDemoMode) {
+                            otMatch = { 
+                                id: target.otId,
+                                outcomes: pmEvent.markets.map(m => ({
+                                    title: m.groupItemTitle || m.question,
+                                    price: Math.max(0.01, Math.min(0.99, parseFloat(m.orderBook?.bids?.[0]?.price || Math.random()) + (Math.random() * 0.1 - 0.05)))
+                                }))
+                            };
                         } else {
-                            // Fallback: Gamma prices
-                            try {
-                                const prices = JSON.parse(m.outcomePrices);
-                                pmYesBid = parseFloat(prices[0]);
-                                pmNoBid = parseFloat(prices[1]);
-                            } catch(e) {}
+                             // Try to find match
+                             otMatch = otDataList.find(o => 
+                                String(o.marketId) === String(target.otId) || 
+                                String(o.id) === String(target.otId)
+                            );
                         }
 
-                        let otYesBid = 0, otNoBid = 0;
-                        if (otMatch && otMatch.outcomes && otMatch.outcomes[idx]) {
-                            let p = parseFloat(otMatch.outcomes[idx].price || 0);
-                            if (p > 0) otYesBid = p - 0.01; // Est. Bid
-                        } else {
-                            // Fallback Simulation ONLY if OT API failed
-                            if (!otList) otYesBid = Math.max(0.01, pmYesBid + (Math.random() * 0.04 - 0.02));
-                        }
-                        otNoBid = 1 - (otYesBid + 0.02);
+                        // Process Markets
+                        const markets = [];
+                        
+                        const clobPromises = pmEvent.markets.map(m => 
+                            fetchWithTimeout(`${CONFIG.ENDPOINTS.PM_CLOB}${m.id}`).then(r => r.json()).catch(() => null)
+                        );
+                        const clobData = await Promise.all(clobPromises);
 
-                        const costA = pmYesBid + otNoBid;
-                        const costB = pmNoBid + otYesBid;
-                        const profit = Math.max(1 - costA, 1 - costB);
-                        const strat = (1 - costA) > (1 - costB) ? "Buy PM(Y)+OT(N)" : "Buy PM(N)+OT(Y)";
+                        pmEvent.markets.forEach((m, idx) => {
+                            const clob = clobData[idx];
+                            const pmBidYes = clob?.best_bid ? parseFloat(clob.best_bid) : 0;
+                            
+                            let otOutcome = null;
+                            if (otMatch) {
+                                if (state.isDemoMode) {
+                                    otOutcome = otMatch.outcomes[idx];
+                                } else {
+                                    otOutcome = otMatch.outcomes ? otMatch.outcomes[idx] : null; 
+                                    const pmName = (m.groupItemTitle || m.question).toLowerCase();
+                                    const betterMatch = otMatch.outcomes?.find(o => pmName.includes((o.title||o.name).toLowerCase()));
+                                    if(betterMatch) otOutcome = betterMatch;
+                                }
+                            }
 
-                        group.subs.push({
-                            title: m.groupItemTitle || m.question,
-                            pmYes: pmYesBid, pmNo: pmNoBid,
-                            otYes: otYesBid, otNo: otNoBid,
-                            profit: profit,
-                            strat: strat,
-                            pmUrl: group.pmUrl 
+                            if (otOutcome) {
+                                const otBidYes = parseFloat(otOutcome.price || 0);
+                                const spread = Math.abs(pmBidYes - otBidYes);
+                                const profit = pmBidYes + otBidYes > 0 ? (1 - (pmBidYes + (1-otBidYes))) : 0; 
+
+                                markets.push({
+                                    name: m.groupItemTitle || m.question,
+                                    pmPrice: pmBidYes,
+                                    otPrice: otBidYes,
+                                    vol: pmEvent.volume,
+                                    pmUrl: `https://polymarket.com/event/${target.slug}`,
+                                    otUrl: `https://app.opinion.trade/detail?topicId=${target.otId}&type=multi`,
+                                    profit: profit
+                                });
+                            }
                         });
-                    });
 
-                    processed.push(group);
+                        if (markets.length > 0) {
+                            results.push({
+                                title: target.title,
+                                markets: markets
+                            });
+                        }
+
+                    } catch (e) {
+                        console.warn("Error processing target:", target.slug, e);
+                    }
                 }
-                
-                if (processed.length > 0) {
-                    allEvents = processed;
-                    lastSuccessfulEvents = processed; // Update Cache
-                    renderView();
-                    updateTicker(allEvents);
-                    
-                    const statusEl = document.getElementById('data-status');
-                    statusEl.innerText = "Online";
-                    statusEl.classList.remove("text-yellow-500", "text-red-500");
-                    statusEl.classList.add("text-green-400");
-                } else if (lastSuccessfulEvents) {
-                     // Keep showing old data but warn
-                     document.getElementById('data-status').innerText = "Stale Data (Retrying)";
-                     document.getElementById('data-status').classList.add("text-yellow-500");
-                }
-                
-            } catch(e) {
-                console.error(e);
-                document.getElementById('data-status').innerText = "Connection Error";
-                document.getElementById('data-status').classList.add("text-red-500");
-                // If we have cache, keep it visible
+
+                if (pmDataFound) updateStatus('pm', 'online');
+                else updateStatus('pm', 'error');
+
+                state.data = results;
+                render();
+                updateTicker();
+                updateDemoBadge();
+                el.lastUpdate.textContent = "Last Update: " + new Date().toLocaleTimeString();
+
+            } catch (globalError) {
+                console.error("Global Fetch Error:", globalError);
             } finally {
-                document.getElementById('loading-indicator').classList.add('hidden');
-                resetTimer();
+                state.isFetching = false;
+                el.loader.classList.add('opacity-0', 'pointer-events-none');
+                startTimer();
             }
         }
 
-        function renderView() {
-            const tbody = document.getElementById('arbitrage-data');
-            tbody.innerHTML = '';
+        // ================= RENDERING =================
+        function updateStatus(id, status) {
+            const el = document.getElementById(`status-${id}`);
+            if(!el) return;
+            el.className = `w-1.5 h-1.5 rounded-full ${
+                status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 
+                status === 'error' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
+            }`;
             
-            if (allEvents.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="py-20 text-center text-gray-500">No Data Available</td></tr>`;
+            // Tooltip update
+            el.parentElement.title = `${id.toUpperCase()} API: ${status.toUpperCase()}`;
+        }
+
+        function updateDemoBadge() {
+            if (state.isDemoMode) {
+                el.demoBadge.classList.remove('hidden');
+                el.demoBadge.classList.add('flex');
+            } else {
+                el.demoBadge.classList.add('hidden');
+                el.demoBadge.classList.remove('flex');
+            }
+        }
+
+        function render() {
+            el.list.innerHTML = '';
+            
+            if (state.data.length === 0) {
+                el.list.innerHTML = `<div class="p-8 text-center text-slate-600 font-mono text-xs">
+                    <p class="mb-2">No matching markets found.</p>
+                    <p class="opacity-50">Checking connections...</p>
+                </div>`;
                 return;
             }
 
-            allEvents.forEach((e, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "bg-[#13161B] border-b border-[#23262F]";
-                tr.innerHTML = `
-                    <td class="table-cell pl-6 font-bold text-white" colspan="3">${e.title}</td>
-                    <td class="table-cell text-right" colspan="3">
-                        <span class="text-xs text-slate-500 mr-4">Vol: $${(e.volume/1000).toFixed(0)}K</span>
-                        <a href="${e.pmUrl}" target="_blank" class="link-btn link-pm mr-2">PM Group ↗</a>
-                        <a href="${e.otUrl}" target="_blank" class="link-btn link-ot">OT Group ↗</a>
-                    </td>
-                    <td class="table-cell"></td>
+            state.data.forEach(group => {
+                const groupHeader = document.createElement('div');
+                groupHeader.className = "px-6 py-2 bg-[#1A1D24] text-slate-300 font-bold text-[11px] border-b border-border flex justify-between items-center";
+                groupHeader.innerHTML = `
+                    <span>${group.title}</span>
+                    <div class="flex gap-2">
+                        <a href="${group.markets[0].pmUrl}" target="_blank" class="badge-pm px-2 py-0.5 rounded text-[10px] hover:brightness-110">Polymarket ↗</a>
+                        <a href="${group.markets[0].otUrl}" target="_blank" class="${state.isDemoMode ? 'badge-demo' : 'badge-ot'} px-2 py-0.5 rounded text-[10px] hover:brightness-110">Opinion ↗</a>
+                    </div>
                 `;
-                tbody.appendChild(tr);
+                el.list.appendChild(groupHeader);
 
-                e.subs.forEach(sub => {
-                    const subTr = document.createElement('tr');
-                    subTr.className = "hover:bg-[#1C1F26] border-b border-[#1A1D24] transition-colors";
+                group.markets.forEach(m => {
+                    const row = document.createElement('div');
+                    row.className = "grid grid-cols-12 gap-4 px-6 py-3 items-center hover:bg-[#1C1F26] transition-colors group";
                     
-                    let profitClass = "text-slate-500";
-                    if(sub.profit > 0.03) profitClass = "text-emerald-400 font-bold bg-emerald-900/20 px-2 py-0.5 rounded";
-                    else if(sub.profit > 0) profitClass = "text-emerald-500";
-
-                    subTr.innerHTML = `
-                        <td class="pl-10 py-3 text-slate-400 font-mono text-xs border-l-2 border-[#23262F] w-[30%]">${sub.title}</td>
-                        <td class="py-3 text-xs text-slate-600 w-[10%]">-</td>
-                        <td class="py-3 text-xs text-slate-600 w-[10%]">-</td>
-                        <td class="text-right py-3 font-mono text-xs w-[15%]">
-                            <span class="price-bid mr-1">${(sub.pmYes * 100).toFixed(1)}%</span>
-                            <span class="text-slate-600">/</span>
-                            <span class="price-bid ml-1">${(sub.pmNo * 100).toFixed(1)}%</span>
-                        </td>
-                        <td class="text-right py-3 font-mono text-xs w-[15%]">
-                            <span class="price-bid mr-1">${(sub.otYes * 100).toFixed(1)}%</span>
-                            <span class="text-slate-600">/</span>
-                            <span class="price-bid ml-1">${(sub.otNo * 100).toFixed(1)}%</span>
-                        </td>
-                        <td class="text-right py-3 font-mono text-xs w-[10%] ${profitClass}">${(sub.profit*100).toFixed(1)}%</td>
-                        <td class="text-right pr-8 py-3 text-[10px] text-slate-500 w-[10%]">${sub.strat}</td>
+                    const diff = m.pmPrice - m.otPrice;
+                    const diffPct = Math.abs(diff);
+                    let diffColor = 'text-slate-500';
+                    if(diffPct > 0.05) diffColor = 'text-white font-bold';
+                    
+                    const barWidth = Math.min(Math.abs(diff) * 500, 100);
+                    
+                    row.innerHTML = `
+                        <div class="col-span-4 flex flex-col justify-center">
+                            <span class="text-slate-300 font-medium truncate" title="${m.name}">${m.name}</span>
+                        </div>
+                        <div class="col-span-1 text-right text-slate-500 text-[10px]">
+                            ${(m.vol/1000).toFixed(0)}k
+                        </div>
+                        <div class="col-span-3 grid grid-cols-2 gap-2 text-center items-center">
+                            <div class="bg-blue-500/10 border border-blue-500/20 rounded py-1 text-blue-400 font-bold">
+                                ${formatPct(m.pmPrice)}
+                            </div>
+                            <div class="bg-purple-500/10 border border-purple-500/20 rounded py-1 ${state.isDemoMode ? 'text-yellow-400' : 'text-purple-400'} font-bold">
+                                ${formatPct(m.otPrice)}
+                            </div>
+                        </div>
+                        <div class="col-span-2 text-right flex flex-col justify-center">
+                            <span class="${diffColor}">${diff > 0 ? '+' : ''}${(diff*100).toFixed(1)}%</span>
+                            <div class="h-1 bg-[#2A2F3A] rounded-full mt-1 w-full overflow-hidden">
+                                <div class="h-full ${diff > 0 ? 'bg-blue-500' : (state.isDemoMode ? 'bg-yellow-500' : 'bg-purple-500')}" style="width: ${barWidth}%"></div>
+                            </div>
+                        </div>
+                        <div class="col-span-2 text-right">
+                             <button onclick="copyStrat('${m.name}', ${m.pmPrice}, ${m.otPrice})" class="opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 rounded text-[10px] hover:bg-cyan-600/30">
+                                COPY
+                             </button>
+                        </div>
                     `;
-                    tbody.appendChild(subTr);
+                    el.list.appendChild(row);
                 });
             });
         }
 
-        function updateTicker(events) {
-            const track = document.getElementById('ticker-track');
-            let itemsHtml = '';
-            let allSubs = [];
-            events.forEach(e => {
-                e.subs.forEach(sub => {
-                    if(sub.profit > TICKER_THRESHOLD) {
-                        allSubs.push({title: sub.title, profit: sub.profit, url: e.pmUrl});
+        function updateTicker() {
+            let items = [];
+            state.data.forEach(g => {
+                g.markets.forEach(m => {
+                    const diff = Math.abs(m.pmPrice - m.otPrice);
+                    if(diff > 0.03) {
+                        items.push(`<span class="text-white font-bold">${m.name}</span> <span class="text-cyan-400">Spread: ${(diff*100).toFixed(1)}%</span>`);
                     }
                 });
             });
             
-            if (allSubs.length === 0) {
-                track.innerHTML = '<div class="px-6 text-slate-500 text-xs font-mono">SCANNING... NO >3% ARB FOUND</div>';
-                return;
+            if (items.length > 0) {
+                const content = items.join('<span class="mx-4 text-slate-700">|</span>');
+                el.ticker.innerHTML = content + '<span class="mx-4 text-slate-700">|</span>' + content;
+                el.ticker.style.animation = `marquee ${items.length * 5}s linear infinite`;
+            } else {
+                el.ticker.innerHTML = '<span class="text-slate-600">Scanning for arbitrage opportunities... Markets aligned.</span>';
             }
-            
-            allSubs.sort((a,b) => b.profit - a.profit);
-            const topItems = allSubs.slice(0, 10);
-            
-            topItems.forEach(i => {
-                itemsHtml += `<div class="flex items-center gap-3 px-8 py-2 border-r border-[#232730] cursor-pointer hover:bg-[#13161B] transition-colors bg-[#0A0C10]" onclick="window.open('${i.url}','_blank')">
-                    <span class="text-orange-500 text-xs">🔥</span>
-                    <span class="text-white text-xs font-bold uppercase tracking-wide">${i.title}</span>
-                    <span class="text-emerald-400 font-mono text-xs font-bold">+${(i.profit*100).toFixed(1)}%</span>
-                </div>`;
-            });
-            track.innerHTML = itemsHtml + itemsHtml; // Duplicate for infinite scroll
         }
 
-        function resetTimer() {
-            countdown = REFRESH_INTERVAL;
-            if (timer) clearInterval(timer);
-            timer = setInterval(() => {
-                countdown--;
-                document.getElementById('countdown').innerText = countdown;
-                if (countdown <= 0) {
-                    countdown = REFRESH_INTERVAL; // Reset immediately visually
-                    loadData();
+        function startTimer() {
+            state.countdown = CONFIG.REFRESH_INTERVAL;
+            if(state.timerId) clearInterval(state.timerId);
+            
+            state.timerId = setInterval(() => {
+                state.countdown--;
+                el.timer.innerText = `REFRESH (${state.countdown})`;
+                if (state.countdown <= 0) {
+                    fetchMarketData();
                 }
             }, 1000);
         }
-        
-        function forceRefresh() {
-             document.getElementById('loading-indicator').classList.remove('hidden');
-             loadData();
-        }
 
-        // Extras
-        async function initBinanceWS() {
-            const priceEl = document.getElementById('binance-price');
-            try {
-                 const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDCUSDT');
-                 const data = await res.json();
-                 priceEl.innerText = parseFloat(data.price).toFixed(4);
-            } catch(e) {}
-            
-            let ws;
-            function connect() {
-                ws = new WebSocket('wss://stream.binance.com:9443/ws/usdcusdt@trade');
-                ws.onmessage = (event) => {
-                    try {
-                        const data = JSON.parse(event.data);
-                        const price = parseFloat(data.p).toFixed(4);
-                        priceEl.innerText = price;
-                        priceEl.style.color = price > 1.0001 ? '#34D399' : (price < 0.9999 ? '#F87171' : '#FFFFFF');
-                    } catch (e) {}
-                };
-                ws.onclose = () => setTimeout(connect, 3000);
-            }
-            connect();
-        }
-
-        async function fetchExtras() {
-            try {
-                const res = await fetch("https://binance.llamarpc.com", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }) });
-                const data = await res.json();
-                document.getElementById('bsc-gwei').innerText = `${Math.floor(parseInt(data.result, 16) / 1e9)}`;
-            } catch(e) {}
-            try {
-                const res = await fetch("https://gasstation.polygon.technology/v2");
-                const data = await res.json();
-                document.getElementById('poly-gwei').innerText = `${Math.floor(data.fast.maxFee)}`;
-            } catch(e) {}
-        }
-
-        window.onload = () => {
-            loadData(); fetchExtras(); initBinanceWS(); 
+        window.forceRefresh = () => {
+            fetchMarketData();
         };
-        function refreshData() { forceRefresh(); fetchExtras(); }
+
+        window.copyStrat = (name, pm, ot) => {
+            const txt = `Arbitrage Opp:\nEvent: ${name}\nPM Bid: ${formatPct(pm)}\nOT Bid: ${formatPct(ot)}\nSpread: ${(Math.abs(pm-ot)*100).toFixed(1)}%`;
+            navigator.clipboard.writeText(txt);
+            alert("Strategy copied to clipboard!");
+        };
+
+        async function fetchGas() {
+            try {
+                const res = await fetch("https://binance.llamarpc.com", { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", method: "eth_gasPrice", params: [], id: 1 }) });
+                const data = await res.json();
+                document.getElementById('gas-price').innerText = Math.floor(parseInt(data.result, 16) / 1e9) + ' gwei';
+            } catch(e) {}
+        }
+        
+        // Init
+        window.onload = () => {
+            el.apiKeyInput.value = CONFIG.OT_API_KEY; // Pre-fill
+            fetchMarketData();
+            fetchGas();
+            const style = document.createElement('style');
+            style.innerHTML = `@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } } .animate-marquee { display: flex; width: max-content; animation: marquee 20s linear infinite; }`;
+            document.head.appendChild(style);
+        };
+
     </script>
 </body>
 </html>

@@ -1,12 +1,16 @@
 {
   "rewrites": [
     {
-      "source": "/api/opinion/:match*",
-      "destination": "https://api.opinion.trade/v1/:match*"
+      "source": "/api/ot/:match*",
+      "destination": "https://proxy.opinion.trade:8443/openapi/:match*"
     },
     {
-      "source": "/api/polymarket/:match*",
+      "source": "/api/pm-gamma/:match*",
       "destination": "https://gamma-api.polymarket.com/:match*"
+    },
+    {
+      "source": "/api/pm-clob/:match*",
+      "destination": "https://clob.polymarket.com/:match*"
     }
   ]
 }
